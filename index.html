@@ -83,6 +83,18 @@ button:hover,.btn:hover{border-color:var(--soft)}
 
 /* Importar */
 .demo{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:var(--amber-tint);border-radius:14px;padding:12px 16px 12px 20px;font-size:15px;margin-bottom:-28px}
+.intro{display:none;flex-direction:column;gap:22px}
+.intro h1{font-size:clamp(40px,6.4vw,88px);line-height:.95;font-weight:800;letter-spacing:-.045em;font-variation-settings:'opsz' 96;max-width:15ch}
+.intro .lede{font-size:clamp(18px,2vw,22px);color:var(--soft);max-width:52ch;line-height:1.4}
+.steps{margin:6px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px;counter-reset:s}
+.steps li{counter-increment:s;background:var(--sheet);border:1px solid var(--rule);border-radius:16px;padding:18px 20px 18px 64px;position:relative;display:flex;flex-direction:column;gap:4px}
+.steps li::before{content:counter(s);position:absolute;left:20px;top:16px;width:30px;height:30px;border-radius:50%;background:var(--patina-tint);color:var(--patina);font-weight:700;display:grid;place-items:center}
+.steps b{font-size:17px}.steps span{color:var(--soft);font-size:14.5px}
+body.nocur .intro{display:flex}
+body.nocur .hero,body.nocur .boardsec,body.nocur .extras{display:none}
+.rule{font-size:14px;color:var(--soft);margin:0 0 8px;line-height:1.45}
+.msgs p{margin:0 0 4px;font-size:15px}
+@media (max-width:760px){.steps{grid-template-columns:1fr}}
 .import{display:flex;gap:18px;align-items:center;flex-wrap:wrap;border:1.5px dashed var(--rule);border-radius:16px;padding:18px 22px;transition:background .15s,border-color .15s}
 .import.over{background:var(--patina-tint);border-color:var(--patina)}
 .import .t{flex:1;min-width:260px}
@@ -193,15 +205,24 @@ footer{font-size:14px;color:var(--soft);border-top:1px solid var(--rule);padding
 <div class="page">
 
   <div class="bar">
-    <div class="brand"><i aria-hidden="true"></i>Grade interativa <small>Engenharia de Materiais, UFSC</small></div>
+    <div class="brand"><i aria-hidden="true"></i>Grade interativa <small id="courseName">UFSC</small></div>
     <div class="actions">
-      <label class="btn btn-main" for="pdfIn">Importar histórico</label>
+      <label class="btn btn-main" for="pdfIn">Enviar PDFs</label>
       <button class="btn-quiet" id="btnExample">Ver exemplo</button>
       <button class="btn-quiet" id="btnReset">Começar do zero</button>
     </div>
   </div>
 
-  <div class="demo" id="demo" hidden><span>Você está vendo um exemplo de aluno. Nada disso é o seu progresso.</span><button id="btnLeaveDemo">Usar com os meus dados</button></div>
+  <div class="demo" id="demo" hidden><span>Você está vendo um exemplo de aluno de Engenharia de Materiais. Nada disso é o seu progresso.</span><button id="btnLeaveDemo">Usar com os meus dados</button></div>
+
+  <section class="intro" aria-label="Comece aqui">
+    <h1>Sua grade, do primeiro semestre à formatura</h1>
+    <p class="lede">Funciona para qualquer curso de graduação da UFSC. Envie dois PDFs que você baixa no CAGR e o app monta a sua grade com pré-requisitos, o que já foi concluído e o que falta.</p>
+    <ol class="steps">
+      <li><b>Currículo do Curso</b><span>Lista as fases, as disciplinas e os pré-requisitos do seu curso.</span></li>
+      <li><b>Histórico Síntese de Graduação</b><span>Mostra o que você já foi aprovado. Pode enviar os dois juntos.</span></li>
+    </ol>
+  </section>
 
   <section class="hero" aria-label="Resumo do curso">
     <h1 id="headline">0% do curso concluído</h1>
@@ -213,16 +234,17 @@ footer{font-size:14px;color:var(--soft);border-top:1px solid var(--rule);padding
 
   <section class="import" id="drop">
     <div class="t">
-      <h2>Atualize pelo seu histórico</h2>
-      <p>Arraste o Histórico Síntese da UFSC em PDF para cá. As disciplinas aprovadas são marcadas sozinhas, e o arquivo nunca sai do seu navegador.</p>
+      <h2>Envie seus PDFs do CAGR</h2>
+      <p>Arraste para cá o Currículo do Curso e o Histórico Síntese, juntos ou um de cada vez. Os arquivos são lidos no seu navegador e não são enviados para lugar nenhum.</p>
+      <div class="tags" id="files" style="margin-top:12px"></div>
     </div>
-    <input type="file" id="pdfIn" accept="application/pdf,.pdf" hidden>
-    <label class="btn" for="pdfIn">Escolher PDF</label>
+    <input type="file" id="pdfIn" accept="application/pdf,.pdf" multiple hidden>
+    <label class="btn" for="pdfIn">Escolher PDFs</label>
     <button id="btnUndo" hidden>Desfazer importação</button>
     <div id="importOut" class="importout"></div>
   </section>
 
-  <section aria-label="Disciplinas por fase">
+  <section class="boardsec" aria-label="Disciplinas por fase">
     <div class="board-head">
       <div>
         <h2>Disciplinas por fase</h2>
@@ -252,102 +274,151 @@ footer{font-size:14px;color:var(--soft);border-top:1px solid var(--rule);padding
     </div>
   </section>
 
-  <footer>Feito por Vinicius Wenzel Rockstroh, aluno de Engenharia de Materiais da UFSC, a partir da planilha que ele usava para planejar a própria matrícula. Seus dados ficam salvos só neste navegador.</footer>
+  <footer>Feito por Vinicius Wenzel Rockstroh, aluno de Engenharia de Materiais da UFSC, a partir da planilha que ele usava para planejar a própria matrícula. Seus dados ficam salvos só neste navegador. Confira sempre as regras do seu curso no CAGR e com a coordenação.</footer>
 </div>
 
 <aside class="drawer" id="drawer" aria-live="polite"></aside>
 
 <script>
-// ---------- Dados da grade (Engenharia de Materiais – UFSC) ----------
-const COURSES = [
- [1,'EGR6603','Desenho Técnico e CAD para Eng. de Materiais',72,4,[]],
- [1,'EMC6711','Introdução à Engenharia de Materiais',72,4,[]],
- [1,'ENS6122','Elementos de Engenharia Ambiental',36,2,[]],
- [1,'FSC5101','Física 1',72,4,[]],
- [1,'MTM3110','Cálculo 1',72,4,[]],
- [1,'QMC5125','Química Geral Experimental A',36,2,[]],
- [1,'QMC5138','Química Geral',36,2,[]],
- [2,'EMC6719','Materiais e Microestruturas',72,4,['EMC6711']],
- [2,'EMC6731','Caracterização Microestrutural de Materiais',72,4,[]],
- [2,'FSC5002','Física 2',72,4,['FSC5101','MTM3110']],
- [2,'MTM3120','Cálculo 2',72,4,['MTM3110']],
- [2,'MTM3121','Álgebra Linear',72,4,[]],
- [2,'QMC6118','Química para Eng. de Materiais 2',72,4,['QMC5138']],
- [3,'EMC5223','Estatística e Metrologia para Engenheiros',72,4,['MTM3110']],
- [3,'EMC6714','Mecanismos de Deformação e Fratura',72,4,['EMC6719']],
- [3,'EMC6715','Metais Ferrosos e não Ferrosos',72,4,['EMC6719']],
- [3,'EMC6716','Materiais Poliméricos',72,4,['EMC6711','QMC6118']],
- [3,'MTM3103','Cálculo 3',72,4,['MTM3120']],
- [3,'MTM3131','Equações Diferenciais Ordinárias',72,4,['MTM3120','MTM3121']],
- [4,'EMC6130','Mecânica dos Sólidos para Eng. de Materiais',72,4,['MTM3120']],
- [4,'EMC6713','Termodinâmica de Materiais',72,4,['MTM3120']],
- [4,'EMC6733','Análise Termofísica de Materiais',36,2,['EMC6716','EMC6719']],
- [4,'EMC6734','Propriedades Mecânicas',54,3,['EMC6714']],
- [4,'EMC6735','Caracterização de Materiais Poliméricos',36,2,['EMC6716']],
- [4,'FSC5113','Física 3',72,4,['MTM3110']],
- [4,'MTM3104','Cálculo 4',72,4,['MTM3120']],
- [5,'EMC5425','Fenômenos de Transportes',72,4,[],['FSC5002','MTM3102']],
- [5,'EMC6718','Análise de Falhas em Materiais',36,2,['EMC6734']],
- [5,'EMC6742','Conformação Mecânica',54,3,['EMC6734']],
- [5,'EMC6743','Fundição',36,2,['EMC6715']],
- [5,'EMC6744','Processamento de Materiais Poliméricos',72,4,['EMC6716']],
- [5,'EMC6746','Materiais Vítreos',72,4,['EMC6719']],
- [5,'FSC5114','Física 4',72,4,['FSC5113']],
- [6,'EMC6551','Estágio Supervisionado 1',258,14,[],null,'est'],
- [7,'EMC6717','Estrutura e Propriedades de Materiais Cerâmicos',72,4,['EMC6746']],
- [7,'EMC6726','Ferramentas da Qualidade',36,2,['EMC5223']],
- [7,'EMC6747','Soldagem',36,2,['EMC6715']],
- [7,'EMC6748','Usinagem',36,2,['EMC6715']],
- [7,'EMC6749','Engenharia de Superfície',72,4,['EMC6713','EMC6719','EMC6731']],
- [7,'EQA6745','Processamento de Materiais Cerâmicos',72,4,['EMC6746']],
- [7,'FSC6062','Física dos Materiais',90,5,['FSC5114']],
- [7,'INE5201','Introdução à Ciência da Computação',54,3,['MTM3110']],
- [8,'EMC6552','Estágio Supervisionado 2',258,14,['EMC6551'],null,'est'],
- [9,'EGC6021','Engenharia e Gestão do Conhecimento',72,4,['EMC6551']],
- [9,'EMC6763','Materiais Sinterizados',54,3,['EMC6713','EQA6745']],
- [9,'EMC6771','Trabalho de Conclusão de Curso 1',36,2,['EMC6551'],null,'tcc'],
- [9,'EMC6900','Técnicas de Simulação Numérica',36,2,['EMC5425','EMC6130','INE5201','MTM3104']],
- [9,'EMC6901','Ciência, Tecnologia e Sociedade',72,4,['EMC6742','EMC6744','EQA6745']],
- [9,'EMC6902','Processo de Desenvolvimento de Produtos',54,3,[]],
- [9,'EQA6900','Introdução à Modelagem e Simulação de Materiais',72,4,['EMC6713','INE5201','MTM3104']],
- [10,'EMC6772','Trabalho de Conclusão de Curso 2',252,14,['EMC6771'],null,'tcc'],
-].map(([fase,code,name,ha,aulas,pre,preAny,cat])=>({fase,code,name,ha,aulas,pre,preAny:preAny||null,cat:cat||'obr'}));
-const BY = Object.fromEntries(COURSES.map(c=>[c.code,c]));
-const REQ = {obr:2916, est:516, tcc:288, opt:474, comp:126};
-const CAT_LABEL = {obr:'Obrigatórias', est:'Estágio', tcc:'TCC', opt:'Optativas', comp:'Complementares'};
-const DEPS = {};
-COURSES.forEach(c=>{[...c.pre,...(c.preAny||[])].forEach(p=>{(DEPS[p]=DEPS[p]||[]).push(c.code)})});
-function allDependents(code,seen=new Set()){(DEPS[code]||[]).forEach(d=>{if(!seen.has(d)){seen.add(d);allDependents(d,seen)}});return seen}
+// ---------- Leitura do currículo e do histórico (formato CAGR / UFSC) ----------
+// items: [{p,x,y,s,t}] — página, x, y (de cima para baixo), tamanho da fonte, texto
+const CODE_RX=/^[A-Z]{3}\d{4}$/;
+function groupLines(items,tol=2.5){
+  const out=[];
+  [...items].sort((a,b)=>a.p-b.p||a.y-b.y||a.x-b.x).forEach(it=>{
+    const last=out[out.length-1];
+    if(last&&last.p===it.p&&Math.abs(last.y-it.y)<=tol)last.items.push(it);
+    else out.push({p:it.p,y:it.y,items:[it]});
+  });
+  out.forEach(l=>l.items.sort((a,b)=>a.x-b.x));
+  return out;
+}
+function tokenizeExpr(str){return (str.match(/\(|\)|[A-Z]{3}\d{4}|\beh\b|\bou\b/gi)||[]).map(t=>t.toLowerCase()==='eh'?'and':t.toLowerCase()==='ou'?'or':t.toUpperCase())}
+function parseExpr(str){
+  const tk=tokenizeExpr(str);if(!tk.length)return null;let i=0;
+  function prim(){const t=tk[i++];if(t==='('){const e=orE();if(tk[i]===')')i++;return e}if(t&&CODE_RX.test(t))return t;return null}
+  function andE(){let a=[prim()];while(tk[i]==='and'){i++;a.push(prim())}a=a.filter(Boolean);return a.length===1?a[0]:a.length?{op:'and',args:a}:null}
+  function orE(){let a=[andE()];while(tk[i]==='or'){i++;a.push(andE())}a=a.filter(Boolean);return a.length===1?a[0]:a.length?{op:'or',args:a}:null}
+  try{return orE()}catch(e){return null}
+}
+function leaves(e,out=[]){if(!e)return out;if(typeof e==='string')out.push(e);else e.args.forEach(x=>leaves(x,out));return out}
+function parseCurriculum(items){
+  const text=items.map(i=>i.t).join(' ');
+  if(!/CURR[ÍI]CULO DO CURSO/i.test(text))throw new Error('Esse PDF não parece ser o Currículo do Curso da UFSC.');
+  const curso=(items.find(i=>/^\d+\s*-\s*.+\[/.test(i.t))||{}).t||'';
+  const curriculo=((text.match(/Curr[íi]culo:\s*(\d{5})/)||[])[1])||(items.find(i=>/^\d{5}$/.test(i.t))||{}).t||'';
+  const lines=groupLines(items.filter(i=>i.s>=7.6||/Fase|Optativas|Complementares/.test(i.t)));
+  let cols=null, section=null, fase=null, cur=null;
+  const courses=[];
+  const flush=()=>{if(cur){courses.push(cur);cur=null}};
+  for(const ln of lines){
+    const big=ln.items.find(i=>i.s>=11);
+    if(big){
+      flush();
+      const m=big.t.match(/(\d+)\s*ª\s*Fase/i);
+      if(m){section='fase';fase=+m[1]}
+      else if(/Optativas/i.test(big.t)){section='opt';fase=null}
+      else if(/Complementares/i.test(big.t)){section='comp';fase=null}
+      else if(/CURR[ÍI]CULO/i.test(big.t)){/* cabeçalho de página */}
+      else {section='outro';fase=null}
+      continue;
+    }
+    if(ln.items.some(i=>/SeTIC|P[áa]gina:|^Observa[çc][õo]es$|^Legenda:?$|^\d{2}\/\d{2}\/\d{4}/.test(i.t.trim()))){flush();if(ln.items.some(i=>/^Observa|^Legenda/.test(i.t.trim())))section='outro';continue}
+    const hd=ln.items.find(i=>/^Tipo$/.test(i.t));
+    if(hd&&ln.items.some(i=>/^H\/A$/.test(i.t))){
+      const at=rx=>{const f=ln.items.find(i=>rx.test(i.t));return f?f.x:null};
+      cols={tipo:at(/^Tipo$/),ha:at(/^H\/A$/),aulas:at(/^Aulas$/),eq:at(/^Equivalentes$/),pre:at(/^Pr[ée]-Requisito$/),conj:at(/^Conjunto$/),prech:at(/^Pr[ée] CH$/)};
+      flush();continue;
+    }
+    if(!cols||!section||section==='outro')continue;
+    const cell=x=>x>=cols.prech-4?'prech':x>=cols.conj-4?'conj':x>=cols.pre-4?'pre':x>=cols.eq-4?'eq':x>=cols.aulas-4?'aulas':x>=cols.ha-6?'ha':x>=cols.tipo-4?'tipo':x>=cols.tipo-200&&x>60?'name':'code';
+    const first=ln.items[0];
+    if(cell(first.x)==='code'&&CODE_RX.test(first.t.trim())){
+      flush();
+      cur={code:first.t.trim(),name:'',tipo:'',ha:0,aulas:0,eq:'',pre:'',conj:'',prech:'',fase,section};
+    }
+    if(!cur)continue;
+    ln.items.forEach(it=>{
+      const c=cell(it.x);if(c==='code'&&it===first&&CODE_RX.test(it.t.trim()))return;
+      const t=it.t.trim();
+      if(c==='name')cur.name+=(cur.name?' ':'')+t;
+      else if(c==='tipo')cur.tipo=t;
+      else if(c==='ha')cur.ha=parseInt(t)||cur.ha;
+      else if(c==='aulas')cur.aulas=parseInt(t)||cur.aulas;
+      else cur[c]+=' '+t;
+    });
+  }
+  flush();
+  const list=courses.map(c=>{
+    const name=c.name.replace(/\s+/g,' ').trim();
+    let cat='obr';
+    if(c.section==='comp'||/Atividades Complementares/i.test(name))cat='comp';
+    else if(c.section==='opt'||/^Op/i.test(c.tipo))cat='opt';
+    else if(/Est[áa]gio/i.test(name))cat='est';
+    else if(/Trabalho de Conclus[ãa]o|^TCC/i.test(name))cat='tcc';
+    return {code:c.code,name,tipo:c.tipo,ha:c.ha,aulas:c.aulas,fase:c.fase,cat,
+      eq:parseExpr(c.eq),pre:parseExpr(c.pre),conj:(c.conj.match(/[A-Z]{3}\d{4}/g)||[]),prech:parseInt((c.prech.match(/\d+/)||[])[0])||0};
+  });
+  const sum=cat=>list.filter(c=>c.cat===cat&&c.fase).reduce((a,c)=>a+c.ha,0);
+  const num=rx=>{const m=text.match(rx);return m?parseInt(m[1]):0};
+  const req={
+    obr:num(/Disciplinas Obrigat[óo]rias:\s*(\d+)\s*horas/i)||sum('obr'),
+    est:num(/Est[áa]gio[^:]*:\s*(\d+)\s*horas/i)||sum('est'),
+    tcc:num(/Trabalho de Conclus[ãa]o[^:]*:\s*(\d+)\s*horas/i)||sum('tcc'),
+    opt:num(/Disciplinas Optativas:\s*(\d+)\s*horas/i)||num(/(\d+)\s*h-?a\s*\(?\d*h?\)?\s*de disciplinas optativas/i)||num(/no m[íi]nimo\s*(\d+)\s*h-?a/i),
+    comp:num(/Atividades Complementares:\s*(\d+)\s*horas/i)||num(/m[íi]nima de\s*(\d+)\s*hoa?s-aula/i)||(list.find(c=>c.cat==='comp')||{}).ha||0
+  };
+  const total=num(/Carga Hor[áa]ria Obrigat[óo]ria:\s*UFSC:\s*(\d+)/i)||num(/Total para Integraliza[çc][ãa]o[^:]*:\s*(\d+)/i);
+  // se a soma das obrigatórias por fase não bater com o resumo, confia nas fases
+  const board=list.filter(c=>c.fase&&c.cat!=='opt'&&c.cat!=='comp');
+  if(!board.length)throw new Error('Não encontrei disciplinas organizadas por fase nesse PDF.');
+  return {curso,curriculo,req,total,courses:board,optativas:list.filter(c=>c.cat==='opt'),comp:list.filter(c=>c.cat==='comp')};
+}
+function parseHistoricoItems(items){
+  // agrupa por linha e por metade da página (o histórico tem duas colunas)
+  const lines=groupLines(items.map(i=>({...i,p:i.p*10+(i.x<(i.pw||595)/2?0:1)})),2.5)
+    .sort((a,b)=>a.p-b.p||a.y-b.y).map(l=>l.items.map(i=>i.t.trim()).join(' ').replace(/\s+/g,' '));
+  const rx=/([A-Z]{3}\d{4})\s+(.+?)\s+(\d{1,2}[.,]\d)\s+(\d{2,3})\s+(FS|FI)\s+(Ob|Op|Ex|Rv)\b/g;
+  const recs=[];
+  lines.forEach(l=>{let m;rx.lastIndex=0;while((m=rx.exec(l)))recs.push({code:m[1],name:m[2],nota:parseFloat(m[3].replace(',','.')),ha:+m[4],freq:m[5],tipo:m[6]})});
+  const text=lines.join(' ');
+  return {
+    recs,
+    iaa:[...text.matchAll(/IAA\s*-\s*(\d{1,2},\d{2})/g)].map(m=>m[1]).pop()||null,
+    form:(text.match(/Prov[áa]vel semestre de formatura:?\s*(\d{4}\/\d)/)||[])[1]||null,
+    curso:(text.match(/Curso:\s*(\d+)/)||[])[1]||null,
+    curriculo:(text.match(/Curr[íi]culo:\s*(\d{4}\/\d)/)||[])[1]||null,
+    isHist:/HIST[ÓO]RICO/i.test(text)
+  };
+}
+
+
+const EXAMPLE_CUR={"curso":"236 - ENGENHARIA DE MATERIAIS [Semestral]","curriculo":"20181","req":{"obr":2916,"est":516,"tcc":288,"opt":474,"comp":126},"total":4320,"courses":[{"code":"EMC6711","name":"Introdução à Engenahria de Materiais","tipo":"Ob","ha":72,"aulas":4,"fase":1,"cat":"obr","eq":null,"pre":null,"conj":[],"prech":0},{"code":"ENS6122","name":"Elementos de Engenharia Ambiental","tipo":"Ob","ha":36,"aulas":2,"fase":1,"cat":"obr","eq":null,"pre":null,"conj":[],"prech":0},{"code":"FSC5101","name":"Física I","tipo":"Ob","ha":72,"aulas":4,"fase":1,"cat":"obr","eq":null,"pre":null,"conj":[],"prech":0},{"code":"GMT6603","name":"Desenho Técnico e CAD para Engenharia de Materiais","tipo":"Ob","ha":72,"aulas":4,"fase":1,"cat":"obr","eq":"EGR6603","pre":null,"conj":[],"prech":0},{"code":"MTM3110","name":"Cálculo 1","tipo":"Ob","ha":72,"aulas":4,"fase":1,"cat":"obr","eq":{"op":"or","args":["MTM3101","MTM5115","MTM5161"]},"pre":null,"conj":[],"prech":0},{"code":"QMC5125","name":"Química Geral Experimental A","tipo":"Ob","ha":36,"aulas":2,"fase":1,"cat":"obr","eq":null,"pre":null,"conj":[],"prech":0},{"code":"QMC5138","name":"Química Geral","tipo":"Ob","ha":36,"aulas":2,"fase":1,"cat":"obr","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6719","name":"Materiais e Microestruturas","tipo":"Ob","ha":72,"aulas":4,"fase":2,"cat":"obr","eq":null,"pre":"EMC6711","conj":[],"prech":0},{"code":"EMC6731","name":"Caracterização Microestrutural de Materiais","tipo":"Ob","ha":72,"aulas":4,"fase":2,"cat":"obr","eq":null,"pre":null,"conj":[],"prech":0},{"code":"FSC5002","name":"Física II","tipo":"Ob","ha":72,"aulas":4,"fase":2,"cat":"obr","eq":"FSC5112","pre":{"op":"or","args":[{"op":"and","args":["FSC5101","MTM3110"]},{"op":"and","args":["FSC5101","MTM3101"]}]},"conj":[],"prech":0},{"code":"MTM3120","name":"Cálculo 2","tipo":"Ob","ha":72,"aulas":4,"fase":2,"cat":"obr","eq":{"op":"or","args":[{"op":"and","args":["MTM3102","MTM3111"]},{"op":"and","args":["MTM3102","MTM5512"]},{"op":"and","args":["MTM5162","MTM5512"]},{"op":"and","args":["MTM3111","MTM5162"]},{"op":"and","args":["MTM3111","MTM5116"]},{"op":"and","args":["MTM5116","MTM5512"]},{"op":"and","args":["MTM5184","MTM5512"]}]},"pre":{"op":"or","args":["MTM3101","MTM3110"]},"conj":[],"prech":0},{"code":"MTM3121","name":"Álgebra Linear","tipo":"Ob","ha":72,"aulas":4,"fase":2,"cat":"obr","eq":{"op":"or","args":["MTM3112","MTM5245","MTM5247"]},"pre":null,"conj":[],"prech":0},{"code":"QMC6118","name":"Química para Engenharia de Materiais 2","tipo":"Ob","ha":72,"aulas":4,"fase":2,"cat":"obr","eq":null,"pre":"QMC5138","conj":[],"prech":0},{"code":"EMC5223","name":"Estatística e Metrologia para Engenheiros","tipo":"Ob","ha":72,"aulas":4,"fase":3,"cat":"obr","eq":null,"pre":{"op":"or","args":["MTM3101","MTM3110"]},"conj":[],"prech":0},{"code":"EMC6714","name":"Mecanismos de Deformação e Fratura","tipo":"Ob","ha":72,"aulas":4,"fase":3,"cat":"obr","eq":null,"pre":"EMC6719","conj":[],"prech":0},{"code":"EMC6715","name":"Metais Ferrosos e não Ferrosos","tipo":"Ob","ha":72,"aulas":4,"fase":3,"cat":"obr","eq":null,"pre":"EMC6719","conj":[],"prech":0},{"code":"EMC6716","name":"Materiais Poliméricos","tipo":"Ob","ha":72,"aulas":4,"fase":3,"cat":"obr","eq":null,"pre":{"op":"and","args":["EMC6711","QMC6118"]},"conj":[],"prech":0},{"code":"MTM3103","name":"Cálculo 3","tipo":"Ob","ha":72,"aulas":4,"fase":3,"cat":"obr","eq":null,"pre":{"op":"or","args":["MTM3102","MTM3120","MTM5162"]},"conj":[],"prech":0},{"code":"MTM3131","name":"Equações Diferenciais Ordinárias","tipo":"Ob","ha":72,"aulas":4,"fase":3,"cat":"obr","eq":{"op":"or","args":["MTM3102","MTM5117","MTM5163"]},"pre":{"op":"or","args":[{"op":"and","args":["MTM3120","MTM3121"]},{"op":"or","args":["MTM3101","MTM5162"]}]},"conj":[],"prech":0},{"code":"EMC6130","name":"Mecânica dos Sólidos para Engenharia de Materiais","tipo":"Ob","ha":72,"aulas":4,"fase":4,"cat":"obr","eq":null,"pre":{"op":"or","args":["MTM3102","MTM3120"]},"conj":[],"prech":0},{"code":"EMC6713","name":"Termodinâmica de Materiais","tipo":"Ob","ha":72,"aulas":4,"fase":4,"cat":"obr","eq":null,"pre":{"op":"or","args":["MTM3102","MTM3120"]},"conj":[],"prech":0},{"code":"EMC6733","name":"Análise Termofísica de Materiais","tipo":"Ob","ha":36,"aulas":2,"fase":4,"cat":"obr","eq":null,"pre":{"op":"and","args":["EMC6716","EMC6719"]},"conj":[],"prech":0},{"code":"EMC6734","name":"Propriedades Mecânicas","tipo":"Ob","ha":54,"aulas":3,"fase":4,"cat":"obr","eq":null,"pre":"EMC6714","conj":[],"prech":0},{"code":"EMC6735","name":"Caracterização de Materiais Poliméricos","tipo":"Ob","ha":36,"aulas":2,"fase":4,"cat":"obr","eq":null,"pre":"EMC6716","conj":[],"prech":0},{"code":"FSC5113","name":"Física III","tipo":"Ob","ha":72,"aulas":4,"fase":4,"cat":"obr","eq":null,"pre":{"op":"or","args":["MTM3101","MTM3110"]},"conj":[],"prech":0},{"code":"MTM3104","name":"Cálculo 4","tipo":"Ob","ha":72,"aulas":4,"fase":4,"cat":"obr","eq":null,"pre":{"op":"or","args":["MTM3102","MTM3120","MTM3131","MTM5163"]},"conj":[],"prech":0},{"code":"EMC5425","name":"Fenômenos de Transportes","tipo":"Ob","ha":72,"aulas":4,"fase":5,"cat":"obr","eq":null,"pre":{"op":"or","args":["FSC5002","MTM3102","MTM3120"]},"conj":[],"prech":0},{"code":"EMC6718","name":"Análise de Falhas em Materiais","tipo":"Ob","ha":36,"aulas":2,"fase":5,"cat":"obr","eq":null,"pre":"EMC6734","conj":[],"prech":0},{"code":"EMC6742","name":"Conformação Mecânica","tipo":"Ob","ha":54,"aulas":3,"fase":5,"cat":"obr","eq":null,"pre":"EMC6734","conj":[],"prech":0},{"code":"EMC6743","name":"Fundição","tipo":"Ob","ha":36,"aulas":2,"fase":5,"cat":"obr","eq":null,"pre":"EMC6715","conj":[],"prech":0},{"code":"EMC6744","name":"Processamento de Materiais Poliméricos","tipo":"Ob","ha":72,"aulas":4,"fase":5,"cat":"obr","eq":null,"pre":"EMC6716","conj":[],"prech":0},{"code":"EMC6746","name":"Materiais Vítreos","tipo":"Ob","ha":72,"aulas":4,"fase":5,"cat":"obr","eq":null,"pre":"EMC6719","conj":[],"prech":0},{"code":"FSC5114","name":"Física IV","tipo":"Ob","ha":72,"aulas":4,"fase":5,"cat":"obr","eq":null,"pre":"FSC5113","conj":[],"prech":0},{"code":"EMC6551","name":"Estágio Supervisionado 1","tipo":"Ob","ha":258,"aulas":14,"fase":6,"cat":"est","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6717","name":"Estrutura e Propriedades de Materiais Cerâmicos","tipo":"Ob","ha":72,"aulas":4,"fase":7,"cat":"obr","eq":null,"pre":"EMC6746","conj":[],"prech":0},{"code":"EMC6726","name":"Ferramentas da Qualidade","tipo":"Ob","ha":36,"aulas":2,"fase":7,"cat":"obr","eq":null,"pre":"EMC5223","conj":[],"prech":0},{"code":"EMC6747","name":"Soldagem","tipo":"Ob","ha":36,"aulas":2,"fase":7,"cat":"obr","eq":null,"pre":"EMC6715","conj":[],"prech":0},{"code":"EMC6748","name":"Usinagem","tipo":"Ob","ha":36,"aulas":2,"fase":7,"cat":"obr","eq":null,"pre":"EMC6715","conj":[],"prech":0},{"code":"EMC6749","name":"Engenharia de Superfície","tipo":"Ob","ha":72,"aulas":4,"fase":7,"cat":"obr","eq":null,"pre":{"op":"and","args":["EMC6713","EMC6719","EMC6731"]},"conj":[],"prech":0},{"code":"EQA6745","name":"Processamento de Materiais Cerâmicos","tipo":"Ob","ha":72,"aulas":4,"fase":7,"cat":"obr","eq":null,"pre":"EMC6746","conj":[],"prech":0},{"code":"FSC6062","name":"Física dos Materiais","tipo":"Ob","ha":90,"aulas":5,"fase":7,"cat":"obr","eq":null,"pre":"FSC5114","conj":[],"prech":0},{"code":"INE5201","name":"Introdução à Ciência da Computação","tipo":"Ob","ha":54,"aulas":3,"fase":7,"cat":"obr","eq":null,"pre":{"op":"or","args":["MTM3101","MTM3110"]},"conj":[],"prech":0},{"code":"EMC6552","name":"Estágio Supervisionado 2","tipo":"Ob","ha":258,"aulas":14,"fase":8,"cat":"est","eq":null,"pre":"EMC6551","conj":[],"prech":0},{"code":"EGC6021","name":"Engenharia e Gestão do Conhecimento","tipo":"Ob","ha":72,"aulas":4,"fase":9,"cat":"obr","eq":null,"pre":"EMC6551","conj":[],"prech":0},{"code":"EMC6763","name":"Materiais Sinterizados","tipo":"Ob","ha":54,"aulas":3,"fase":9,"cat":"obr","eq":null,"pre":{"op":"and","args":["EMC6713","EQA6745"]},"conj":[],"prech":0},{"code":"EMC6771","name":"Trabalho de Conclusão de Curso 1","tipo":"Ob","ha":36,"aulas":2,"fase":9,"cat":"tcc","eq":null,"pre":"EMC6551","conj":[],"prech":0},{"code":"EMC6900","name":"Técnicas de Simulação Numérica para Engenharia de Materiais","tipo":"Ob","ha":36,"aulas":2,"fase":9,"cat":"obr","eq":null,"pre":{"op":"and","args":["EMC5425","EMC6130","INE5201","MTM3104"]},"conj":[],"prech":0},{"code":"EMC6901","name":"Ciência, Tecnologia e Sociedade","tipo":"Ob","ha":72,"aulas":4,"fase":9,"cat":"obr","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6902","name":"Processo de Desenvolvimento de Produtos","tipo":"Ob","ha":54,"aulas":3,"fase":9,"cat":"obr","eq":null,"pre":{"op":"and","args":["EMC6742","EMC6744","EQA6745"]},"conj":[],"prech":0},{"code":"EQA6900","name":"Introdução à Modelagem e Simulação de Materiais","tipo":"Ob","ha":72,"aulas":4,"fase":9,"cat":"obr","eq":null,"pre":{"op":"and","args":["EMC6713","INE5201","MTM3104"]},"conj":[],"prech":0},{"code":"EMC6772","name":"Trabalho de Conclusão de Curso 2","tipo":"Ob","ha":252,"aulas":14,"fase":10,"cat":"tcc","eq":null,"pre":"EMC6771","conj":[],"prech":0}],"optativas":[{"code":"EGC5015","name":"Teoria Geral de Sistemas","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EGC5027","name":"Criatividade e Inovação","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EGC5028","name":"Habitats de Inovação","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EGC6022","name":"Engenharia e Gestão da Inovação","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EGC6710","name":"Governança do Conhecimento para a Inovação","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EGC6711","name":"Planejamento da Cadeia de Valor em Organização Industrial","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC5217","name":"Trabalho em Chapas","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":"EMC6742","conj":[],"prech":0},{"code":"EMC5763","name":"Materiais Sinterizados: tecnologia de fabricação, produtos e aplicações","tipo":"Op","ha":56,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6001","name":"Programa de Intercâmbio I","tipo":"Op","ha":0,"aulas":0,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6002","name":"Programa de Intercâmbio II","tipo":"Op","ha":0,"aulas":0,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6003","name":"Programa de Intercâmbio III","tipo":"Op","ha":0,"aulas":0,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6004","name":"Programa de Intercâmbio IV","tipo":"Op","ha":0,"aulas":0,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6005","name":"Disciplina de Iniciação Científica","tipo":"Op","ha":0,"aulas":0,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6006","name":"Disciplina de Pós-Graduação I","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6007","name":"Disciplina de Pós-Graduação II","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6008","name":"Tópicos Especiais 1","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6009","name":"Tópicos Especiais 2","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6010","name":"Tópicos Especiais 3","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6011","name":"Tópicos Especiais 4","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6012","name":"Tópicos Especiais 5","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6013","name":"Tópicos Especiais 6","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6015","name":"Tópicos Especiais Avançados 2","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6016","name":"Tópicos Especiais Avançados 3","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6017","name":"Tópicos Especiais Avançados 4","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6018","name":"Tópicos Especiais Avançados 5","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6019","name":"Tópicos Especiais Avançados 6","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6020","name":"Tópicos Especiais Avançados 7","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6021","name":"Tópicos Especiais Avançados 8","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6022","name":"Tópicos Especiais Avançados 9","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6553","name":"Estágio Supervisionado 3","tipo":"Op","ha":258,"aulas":14,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6706","name":"Materiais Compósitos","tipo":"Op","ha":54,"aulas":2,"fase":null,"cat":"opt","eq":null,"pre":"EMC6744","conj":[],"prech":0},{"code":"EMC6710","name":"Técnicas de Aquisição e Tratamento de Dados","tipo":"Op","ha":54,"aulas":2,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6712","name":"Eletroquímica e Corrosão","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":"QMC5138","conj":[],"prech":0},{"code":"EMC6720","name":"Materiais Magnéticos","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":"FSC6062","conj":[],"prech":0},{"code":"EMC6721","name":"Valorização de Resíduos e Desenvolvimento de Novos Produtos","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":"ENS6122","conj":[],"prech":0},{"code":"EMC6722","name":"Introdução à Tribologia","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":"EMC6749","conj":[],"prech":0},{"code":"EMC6723","name":"Soldagem e Automação","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","eq":null,"pre":"EMC6747","conj":[],"prech":0},{"code":"EMC6728","name":"Introdução à Segurança do Trabalho","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"INE6730","name":"Métodos Estatísticos para Engenharia de Materiais","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":{"op":"or","args":["MTM3101","MTM3110"]},"conj":[],"prech":0},{"code":"LSB7904","name":"Língua Brasileira de Sinais I (PCC 18horas- aula)","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0}],"comp":[{"code":"EMC6000","name":"Atividades Complementares","tipo":"Ob","ha":126,"aulas":7,"fase":null,"cat":"comp","eq":null,"pre":null,"conj":[],"prech":0}]};
+const EXAMPLE_RECS=[{"code":"EGR6603","name":"Desenho Técnico e CAD para Engenharia de Materiais","ha":72,"tipo":"Ob"},{"code":"EMC6711","name":"Introdução à Engenahria de Materiais","ha":72,"tipo":"Ob"},{"code":"MTM3100","name":"Pré-Cálculo","ha":72,"tipo":"Ob"},{"code":"MTM3111","name":"Geometria Analítica","ha":72,"tipo":"Ob"},{"code":"QMC5125","name":"Química Geral Experimental A","ha":36,"tipo":"Ob"},{"code":"QMC5138","name":"Química Geral","ha":36,"tipo":"Ob"},{"code":"EMC6719","name":"Materiais e Microestruturas","ha":72,"tipo":"Ob"},{"code":"EMC6731","name":"Caracterização Microestrutural de Materiais","ha":72,"tipo":"Ob"},{"code":"FSC5101","name":"Física I","ha":72,"tipo":"Ob"},{"code":"QMC6118","name":"Química para Engenharia de Materiais 2","ha":72,"tipo":"Ob"},{"code":"EMC6714","name":"Mecanismos de Deformação e Fratura","ha":72,"tipo":"Ob"},{"code":"EMC6715","name":"Metais Ferrosos e não Ferrosos","ha":72,"tipo":"Ob"},{"code":"EMC6716","name":"Materiais Poliméricos","ha":72,"tipo":"Ob"},{"code":"MTM3110","name":"Cálculo 1","ha":72,"tipo":"Ob"},{"code":"EMC6733","name":"Análise Termofísica de Materiais","ha":36,"tipo":"Ob"},{"code":"EMC6734","name":"Propriedades Mecânicas","ha":54,"tipo":"Ob"},{"code":"EMC6735","name":"Caracterização de Materiais Poliméricos","ha":36,"tipo":"Ob"},{"code":"EMC6744","name":"Processamento de Materiais Poliméricos","ha":72,"tipo":"Ob"},{"code":"MTM3120","name":"Cálculo 2","ha":72,"tipo":"Ob"},{"code":"EMC5425","name":"Fenômenos de Transportes","ha":72,"tipo":"Ob"},{"code":"EMC6746","name":"Materiais Vítreos","ha":72,"tipo":"Ob"},{"code":"ENS6122","name":"Elementos de Engenharia Ambiental","ha":36,"tipo":"Ob"},{"code":"FSC5002","name":"Física II","ha":72,"tipo":"Ob"},{"code":"MTM3103","name":"Cálculo 3","ha":72,"tipo":"Ob"},{"code":"EMC6713","name":"Termodinâmica de Materiais","ha":72,"tipo":"Ob"},{"code":"EMC6728","name":"Introdução à Segurança do Trabalho","ha":36,"tipo":"Op"},{"code":"EMC6743","name":"Fundição","ha":36,"tipo":"Ob"},{"code":"MTM3121","name":"Álgebra Linear","ha":72,"tipo":"Ob"},{"code":"EMC5223","name":"Estatística e Metrologia para Engenheiros","ha":72,"tipo":"Ob"},{"code":"INE5201","name":"Introdução à Ciência da Computação","ha":54,"tipo":"Ob"},{"code":"MTM3104","name":"Cálculo 4","ha":72,"tipo":"Ob"},{"code":"MTM3131","name":"Equações Diferenciais Ordinárias","ha":72,"tipo":"Ob"},{"code":"EMC6717","name":"Estrutura e Propriedades de Materiais Cerâmicos","ha":72,"tipo":"Ob"},{"code":"EMC6726","name":"Ferramentas da Qualidade","ha":36,"tipo":"Ob"},{"code":"EMC6747","name":"Soldagem","ha":36,"tipo":"Ob"},{"code":"EMC6748","name":"Usinagem","ha":36,"tipo":"Ob"},{"code":"EQA6745","name":"Processamento de Materiais Cerâmicos","ha":72,"tipo":"Ob"},{"code":"EMC6551","name":"Estágio Supervisionado 1","ha":258,"tipo":"Ob"},{"code":"EGC6021","name":"Engenharia e Gestão do Conhecimento","ha":72,"tipo":"Ob"},{"code":"EMC6742","name":"Conformação Mecânica","ha":54,"tipo":"Ob"},{"code":"EMC6763","name":"Materiais Sinterizados","ha":54,"tipo":"Ob"},{"code":"EMC6771","name":"Trabalho de Conclusão de Curso 1","ha":36,"tipo":"Ob"},{"code":"FSC5113","name":"Física III","ha":72,"tipo":"Ob"},{"code":"PSI5112","name":"Relações Humanas","ha":36,"tipo":"Ex"}];
 
 // ---------- Estado ----------
-const EXAMPLE = {
-  done: COURSES.map(c=>c.code).filter(c=>!['EMC6718','FSC5114','EMC6749','FSC6062','EMC6552','EMC6900','EQA6900','EMC6772'].includes(c)),
-  opt: [[72,1],[36,1],[36,0],[36,1],[72,1],[72,1],[36,0],[72,0],[72,0],[72,0],[72,1],[72,1],[36,1]].map(([h,d],i)=>({name:'Optativa '+(i+1),ha:h,done:!!d})),
-  comp: [{name:'EJEM (empresa júnior)',ha:60,done:true},{name:'CAMAT (centro acadêmico)',ha:60,done:true},{name:'Outras atividades',ha:10,done:true}]
-};
-const EMPTY = {done:[],opt:[],comp:[]};
-const KEY='grade-materiais-ufsc-v1';
-let state, selected=null;
-function load(){try{const s=localStorage.getItem(KEY);if(s){const o=JSON.parse(s);delete o.turmas;delete o.sel;return o}}catch(e){}return structuredClone(EMPTY)}
+const CAT_LABEL={obr:'Obrigatórias',est:'Estágio',tcc:'TCC',opt:'Optativas',comp:'Complementares'};
+const KEY='grade-ufsc-v2';
+let state, selected=null, saved=null, undoState=null;
+let CUR=null, COURSES=[], BY={}, REQ={obr:0,est:0,tcc:0,opt:0,comp:0}, DEPS={}, APPROVED=new Set(), FASES=[];
+const blank=()=>({cur:null,recs:[],done:[],opt:[],comp:[],hist:null});
+function load(){try{const s=localStorage.getItem(KEY);if(s)return Object.assign(blank(),JSON.parse(s))}catch(e){}return blank()}
 function save(){if(state.demo)return;try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
-state=load();
-const isDone=c=>state.done.includes(c);
-function status(c){
-  if(isDone(c.code))return 'done';
-  const allOk=c.pre.every(isDone), anyOk=!c.preAny||c.preAny.some(isDone);
-  return allOk&&anyOk?'avail':'lock';
+function refresh(){
+  CUR=state.cur;COURSES=CUR?CUR.courses:[];
+  BY=Object.fromEntries(COURSES.map(c=>[c.code,c]));
+  REQ=CUR?CUR.req:{obr:0,est:0,tcc:0,opt:0,comp:0};
+  DEPS={};COURSES.forEach(c=>[...new Set(leaves(c.pre))].forEach(p=>{if(BY[p])(DEPS[p]=DEPS[p]||[]).push(c.code)}));
+  FASES=[...new Set(COURSES.map(c=>c.fase))].sort((a,b)=>a-b);
+  APPROVED=new Set(state.done);
 }
-function missing(c){
-  const m=c.pre.filter(p=>!isDone(p));
-  if(c.preAny&&!c.preAny.some(isDone))m.push(c.preAny.join(' ou '));
-  return m;
-}
-const fmt=n=>n.toLocaleString('pt-BR');
-const pctTxt=p=>(Math.round(p*10)/10).toLocaleString('pt-BR');
+const fmt=n=>(+n||0).toLocaleString('pt-BR');
 const esc=s=>String(s).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
-
-
-// ---------- Resumo ----------
+const nameOf=code=>BY[code]?BY[code].name:((state.recs.find(r=>r.code===code)||{}).name||code);
+function evalEq(e){if(!e)return false;if(typeof e==='string')return APPROVED.has(e);return e.op==='and'?e.args.every(evalEq):e.args.some(evalEq)}
+function isDone(code){if(APPROVED.has(code))return true;const c=BY[code];return !!(c&&c.eq&&evalEq(c.eq))}
+function evalPre(e){if(!e)return true;if(typeof e==='string')return isDone(e);return e.op==='and'?e.args.every(evalPre):e.args.some(evalPre)}
+function allDependents(code,seen=new Set()){(DEPS[code]||[]).forEach(d=>{if(!seen.has(d)){seen.add(d);allDependents(d,seen)}});return seen}
 function totals(){
   const t={obr:0,est:0,tcc:0,opt:0,comp:0};
   COURSES.forEach(c=>{if(isDone(c.code))t[c.cat]+=c.ha});
@@ -355,62 +426,82 @@ function totals(){
   state.comp.forEach(o=>{if(o.done)t.comp+=+o.ha||0});
   return t;
 }
-function bottleneck(){
-  return COURSES.filter(c=>!isDone(c.code)).map(c=>({c,n:allDependents(c.code).size})).sort((a,b)=>b.n-a.n||a.c.fase-b.c.fase)[0];
+const hoursTotal=()=>Object.values(totals()).reduce((a,b)=>a+b,0);
+function status(c){
+  if(isDone(c.code))return 'done';
+  return evalPre(c.pre)&&(!c.prech||hoursTotal()>=c.prech)?'avail':'lock';
 }
+function describe(e){if(typeof e==='string')return nameOf(e);return e.args.map(a=>typeof a==='string'?nameOf(a):'('+describe(a)+')').join(e.op==='and'?' e ':' ou ')}
+function missingText(c){
+  let parts=[];const e=c.pre;
+  if(e&&!evalPre(e)){
+    if(typeof e!=='string'&&e.op==='and')parts=e.args.filter(a=>!evalPre(a)).map(a=>typeof a==='string'?nameOf(a):describe(a));
+    else parts=[describe(e)];
+  }
+  if(c.prech&&hoursTotal()<c.prech)parts.push(`ter ${fmt(c.prech)} h/a concluídas`);
+  return parts.join(' e ');
+}
+const shortCourse=()=>CUR?CUR.curso.replace(/^\d+\s*-\s*/,'').replace(/\s*\[.*\]\s*$/,'').toLowerCase().replace(/(^|\s)(\p{L})/gu,(m,a,b)=>a+b.toUpperCase()).replace(/\s(De|Da|Do|Das|Dos|E)\s/g,m=>m.toLowerCase()):'';
+
+// ---------- Resumo ----------
+function bottleneck(){return COURSES.filter(c=>!isDone(c.code)).map(c=>({c,n:allDependents(c.code).size})).sort((a,b)=>b.n-a.n||a.c.fase-b.c.fase)[0]}
 function renderHero(){
+  document.body.classList.toggle('nocur',!CUR);
+  document.getElementById('courseName').textContent=CUR?`${shortCourse()}, UFSC · currículo ${CUR.curriculo.replace(/^(\d{4})(\d)$/,'$1.$2')}`:'UFSC';
+  if(!CUR)return;
   const t=totals();let num=0,den=0,hrs='';
-  for(const k of Object.keys(REQ)){
+  for(const k of Object.keys(CAT_LABEL)){
+    if(!REQ[k])continue;
     const got=Math.min(t[k],REQ[k]);num+=got;den+=REQ[k];
     hrs+=`<div><h3>${CAT_LABEL[k]}</h3><p class="num">${fmt(t[k])} de ${fmt(REQ[k])} h/a</p><div class="meter"><i style="width:${got/REQ[k]*100}%"></i></div></div>`;
   }
   document.getElementById('hours').innerHTML=hrs;
-  const p=Math.floor(num/den*100);
+  document.getElementById('hours').style.gridTemplateColumns=`repeat(${Object.keys(CAT_LABEL).filter(k=>REQ[k]).length},1fr)`;
+  const p=den?Math.floor(num/den*100):0;
   const pend=COURSES.filter(c=>!isDone(c.code));
   document.getElementById('headline').textContent=`${p}% do curso concluído`;
-  document.getElementById('lede').innerHTML=pend.length
-    ?`Faltam <b class="num">${pend.length} disciplinas obrigatórias</b> e <b class="num">${fmt(den-num)} horas-aula</b> até a formatura.`
+  document.getElementById('lede').innerHTML=!state.done.length&&!state.demo
+    ?`A grade de ${esc(shortCourse())} está pronta. Agora envie o seu histórico ou marque as disciplinas que você já concluiu.`
+    :pend.length?`Faltam <b class="num">${pend.length} ${pend.length===1?'disciplina obrigatória':'disciplinas obrigatórias'}</b> e <b class="num">${fmt(den-num)} horas-aula</b> até a formatura.`
     :`Todas as obrigatórias concluídas. Faltam <b class="num">${fmt(den-num)} horas-aula</b> em outras categorias.`;
-  if(!state.done.length&&!state.demo)document.getElementById('lede').innerHTML=`Importe o seu histórico da UFSC ou marque as disciplinas que você já concluiu para ver o seu caminho até a formatura.`;
-  // faixa do curso
   let s='',i=0;
-  for(let f=1;f<=10;f++){
+  FASES.forEach(f=>{
     const cs=COURSES.filter(c=>c.fase===f);
     s+=`<div class="sgroup" style="flex-grow:${cs.length}"><div class="sblocks">${cs.map(c=>`<button class="sb ${status(c)}${selected===c.code?' sel':''}" style="--i:${i++}" data-code="${c.code}" title="${esc(c.name)}" aria-label="${esc(c.name)}"></button>`).join('')}</div><span>${f}ª</span></div>`;
-  }
+  });
   document.getElementById('strip').innerHTML=s;
-  const av=pend.filter(c=>status(c)==='avail').length, lk=pend.length-av;
-  const n=bottleneck();
+  const av=pend.filter(c=>status(c)==='avail').length,lk=pend.length-av,n=bottleneck();
   document.getElementById('keyrow').innerHTML=`
     <span class="k"><i class="dot done"></i><span class="num">${COURSES.length-pend.length}</span>&nbsp;concluídas</span>
     <span class="k"><i class="dot avail"></i><span class="num">${av}</span>&nbsp;disponíveis agora</span>
     <span class="k"><i class="dot lock"></i><span class="num">${lk}</span>&nbsp;${lk===1?'bloqueada':'bloqueadas'}</span>
-    ${n&&n.n?`<button class="neck" data-go="${n.c.code}">Seu gargalo: ${esc(n.c.name)} libera ${n.n} ${n.n===1?'disciplina':'disciplinas'}</button>`:''}`;
+    ${n&&n.n&&state.done.length?`<button class="neck" data-go="${n.c.code}">Seu gargalo: ${esc(n.c.name)} libera ${n.n} ${n.n===1?'disciplina':'disciplinas'}</button>`:''}`;
 }
 
 // ---------- Quadro ----------
 function renderBoard(){
   const b=document.getElementById('board');
-  const pre=selected?new Set([...BY[selected].pre,...(BY[selected].preAny||[])]):new Set();
+  if(!CUR){b.innerHTML='';return}
+  const pre=selected?new Set(leaves(BY[selected].pre)):new Set();
   const dep=selected?allDependents(selected):new Set();
   b.classList.toggle('dim',!!selected);
+  b.style.gridTemplateColumns=`repeat(${FASES.length},minmax(124px,1fr))`;
+  b.style.minWidth=FASES.length*130+'px';
   let h='<svg class="links" id="links" aria-hidden="true"></svg>';
-  for(let f=1;f<=10;f++){
-    const cs=COURSES.filter(c=>c.fase===f);
-    const dn=cs.filter(c=>isDone(c.code)).length;
+  FASES.forEach(f=>{
+    const cs=COURSES.filter(c=>c.fase===f),dn=cs.filter(c=>isDone(c.code)).length;
     h+=`<div class="col"><div class="colhead"><b>${f}ª</b><span class="num">${dn} de ${cs.length}</span></div>`;
     cs.forEach(c=>{
-      const s=status(c),u=allDependents(c.code).size;
-      const cls=['c',s];
+      const s=status(c),u=allDependents(c.code).size,cls=['c',s];
       if(selected===c.code)cls.push('sel');else if(pre.has(c.code))cls.push('pre');else if(dep.has(c.code))cls.push('unlk');
-      const tip=s==='lock'?`Bloqueada: falta ${missing(c).map(x=>BY[x]?BY[x].name:x).join(', ')}`:s==='avail'?'Disponível para cursar':'Concluída';
+      const tip=s==='lock'?`Bloqueada: falta ${missingText(c)}`:s==='avail'?'Disponível para cursar':'Concluída';
       h+=`<div class="${cls.join(' ')}" data-code="${c.code}" tabindex="0" role="button" aria-label="${esc(c.name+'. '+tip)}" title="${esc(tip)}">
         <span class="nm">${esc(c.name)}</span>
         <span class="foot">${u&&s!=='done'?`<span class="lib">libera ${u}</span>`:''}<span class="chk" data-toggle="${c.code}" role="checkbox" aria-checked="${s==='done'}" aria-label="Marcar ${esc(c.name)} como concluída" tabindex="0">✓</span></span>
       </div>`;
     });
     h+='</div>';
-  }
+  });
   b.innerHTML=h;
   requestAnimationFrame(drawLinks);
 }
@@ -423,34 +514,37 @@ function drawLinks(){
   const box=b.getBoundingClientRect();
   const rect=code=>{const el=b.querySelector(`.c[data-code="${code}"]`);if(!el)return null;const r=el.getBoundingClientRect();return {l:r.left-box.left,r:r.right-box.left,cy:r.top-box.top+r.height/2}};
   const path=(a,z)=>{const dx=Math.max(26,(z.l-a.r)/2);return `M${a.r} ${a.cy} C${a.r+dx} ${a.cy},${z.l-dx} ${z.cy},${z.l} ${z.cy}`};
-  const c=BY[selected];let out='';
-  [...c.pre,...(c.preAny||[])].forEach(p=>{const a=rect(p),z=rect(selected);if(a&&z)out+=`<path d="${path(a,z)}" fill="none" stroke="var(--link)" stroke-width="2.2"/><circle cx="${a.r}" cy="${a.cy}" r="3.5" fill="var(--link)"/>`});
+  let out='';
+  [...new Set(leaves(BY[selected].pre))].forEach(p=>{const a=rect(p),z=rect(selected);if(a&&z)out+=`<path d="${path(a,z)}" fill="none" stroke="var(--link)" stroke-width="2.2"/><circle cx="${a.r}" cy="${a.cy}" r="3.5" fill="var(--link)"/>`});
   const dep=allDependents(selected);
-  COURSES.filter(x=>dep.has(x.code)).forEach(x=>{[...x.pre,...(x.preAny||[])].filter(p=>p===selected||dep.has(p)).forEach(p=>{const a=rect(p),z=rect(x.code);if(a&&z)out+=`<path d="${path(a,z)}" fill="none" stroke="var(--patina)" stroke-width="2" stroke-dasharray="5 4"/>`})});
+  COURSES.filter(x=>dep.has(x.code)).forEach(x=>{[...new Set(leaves(x.pre))].filter(p=>p===selected||dep.has(p)).forEach(p=>{const a=rect(p),z=rect(x.code);if(a&&z)out+=`<path d="${path(a,z)}" fill="none" stroke="var(--patina)" stroke-width="2" stroke-dasharray="5 4"/>`})});
   svg.innerHTML=out;
 }
 
 // ---------- Painel lateral ----------
 function itemBtn(code){
   const c=BY[code];
-  if(!c)return `<button disabled><i class="dot lock"></i>${code}<small>fora desta grade</small></button>`;
-  const s=status(c);
-  return `<button data-go="${code}"><i class="dot ${s}"></i>${esc(c.name)}<small>${c.fase}ª fase</small></button>`;
+  if(!c)return `<button disabled><i class="dot ${isDone(code)?'done':'lock'}"></i>${esc(nameOf(code))}<small>${code}</small></button>`;
+  return `<button data-go="${code}"><i class="dot ${status(c)}"></i>${esc(c.name)}<small>${c.fase}ª fase</small></button>`;
 }
 function renderDrawer(){
   const d=document.getElementById('drawer');
-  if(!selected){d.classList.remove('open');return}
+  if(!selected||!BY[selected]){d.classList.remove('open');return}
   const c=BY[selected],s=status(c);
-  const stTxt={done:'Concluída',avail:'Disponível para cursar',lock:'Bloqueada'}[s];
-  const pre=[...c.pre,...(c.preAny||[])],dep=[...allDependents(c.code)];
+  const viaEq=s==='done'&&!APPROVED.has(c.code);
+  const stTxt={done:viaEq?'Concluída por equivalência':'Concluída',avail:'Disponível para cursar',lock:'Bloqueada'}[s];
+  const pre=[...new Set(leaves(c.pre))],dep=[...allDependents(c.code)];
+  const hasOr=JSON.stringify(c.pre||'').includes('"or"');
   d.innerHTML=`
     <div class="dtop"><div><h3>${esc(c.name)}</h3><p>${c.code}, ${c.fase}ª fase</p></div><button class="close" id="dClose" aria-label="Fechar">×</button></div>
     <span class="state ${s}"><i class="dot ${s}"></i>${stTxt}</span>
     <div class="specs"><div><b class="num">${c.ha}</b><span>horas-aula</span></div><div><b class="num">${c.aulas}</b><span>aulas por semana</span></div><div><b class="num">${dep.length}</b><span>${dep.length===1?'disciplina liberada':'disciplinas liberadas'}</span></div></div>
-    ${s==='lock'?`<div class="need">Para liberar, conclua ${missing(c).map(x=>BY[x]?BY[x].name:x).join(' e ')}.</div>`:''}
-    <div class="dsec"><h4>Pré-requisitos${c.preAny?' (basta uma das opções)':''}</h4>${pre.length?`<div class="dlist">${pre.map(itemBtn).join('')}</div>`:'<p class="empty">Nenhum. Pode ser cursada a qualquer momento.</p>'}</div>
+    ${s==='lock'?`<div class="need">Para liberar: ${esc(missingText(c))}.</div>`:''}
+    <div class="dsec"><h4>Pré-requisitos</h4>${hasOr?`<p class="rule">${esc(describe(c.pre))}</p>`:''}${pre.length?`<div class="dlist">${pre.map(itemBtn).join('')}</div>`:c.prech?'':'<p class="empty">Nenhum. Pode ser cursada a qualquer momento.</p>'}${c.prech?`<p class="rule">Exige ${fmt(c.prech)} h/a já concluídas.</p>`:''}</div>
+    ${c.conj&&c.conj.length?`<div class="dsec"><h4>Cursar junto com</h4><div class="dlist">${c.conj.map(itemBtn).join('')}</div></div>`:''}
     <div class="dsec"><h4>Libera depois</h4>${dep.length?`<div class="dlist">${dep.map(itemBtn).join('')}</div>`:'<p class="empty">Nenhuma disciplina depende desta.</p>'}</div>
-    <button class="toggle ${s==='done'?'':'btn-main'}" id="dToggle">${s==='done'?'Desmarcar conclusão':'Marcar como concluída'}</button>`;
+    ${c.eq?`<p class="rule">Equivalentes: ${esc(describe(c.eq))}</p>`:''}
+    <button class="toggle ${s==='done'?'':'btn-main'}" id="dToggle" ${viaEq?'disabled':''}>${s==='done'?'Desmarcar conclusão':'Marcar como concluída'}</button>`;
   d.classList.add('open');
   document.getElementById('dToggle').onclick=()=>toggle(c.code);
   document.getElementById('dClose').onclick=()=>select(null);
@@ -462,33 +556,111 @@ function renderList(kind){
     <input type="checkbox" id="${kind}-ok-${i}" ${o.done?'checked':''} data-k="${kind}" data-i="${i}" data-f="done" aria-label="Concluída">
     <input type="text" id="${kind}-nm-${i}" value="${esc(o.name)}" data-k="${kind}" data-i="${i}" data-f="name" aria-label="Nome">
     <span class="hrs"><input type="number" id="${kind}-ha-${i}" min="0" value="${o.ha}" data-k="${kind}" data-i="${i}" data-f="ha" aria-label="Horas-aula">h/a</span>
-    <button class="rm" data-del="${kind}" data-i="${i}" aria-label="Remover">×</button></div>`).join('')||`<p class="soft" style="padding:12px 0;font-size:15px">${kind==='opt'?'Nenhuma optativa ainda. Elas entram sozinhas quando você importa o histórico.':'Nenhuma atividade ainda. Adicione empresa júnior, centro acadêmico, eventos e outras.'}</p>`;
+    <button class="rm" data-del="${kind}" data-i="${i}" aria-label="Remover">×</button></div>`).join('')||`<p class="soft" style="padding:12px 0;font-size:15px">${kind==='opt'?'Nenhuma optativa ainda. Elas entram sozinhas quando você envia o histórico.':'Nenhuma atividade ainda. Adicione empresa júnior, centro acadêmico, eventos e outras.'}</p>`;
   renderNote(kind);
 }
 function renderNote(kind){
   const t=state[kind].filter(o=>o.done).reduce((a,o)=>a+(+o.ha||0),0),req=REQ[kind];
-  document.getElementById(kind+'Note').textContent=t>=req?`${fmt(t)} de ${fmt(req)} h/a. Exigência cumprida.`:`${fmt(t)} de ${fmt(req)} h/a. Faltam ${fmt(req-t)}.`;
+  document.getElementById(kind+'Note').textContent=!req?`${fmt(t)} h/a`:t>=req?`${fmt(t)} de ${fmt(req)} h/a. Exigência cumprida.`:`${fmt(t)} de ${fmt(req)} h/a. Faltam ${fmt(req-t)}.`;
 }
 
-function render(){renderHero();renderBoard();renderDrawer();renderList('opt');renderList('comp')}
+function render(){refresh();renderHero();renderBoard();renderDrawer();renderList('opt');renderList('comp');renderFiles()}
 function select(code){selected=code;renderHero();renderBoard();renderDrawer()}
 function toggle(code){
-  if(isDone(code))state.done=state.done.filter(c=>c!==code);else state.done.push(code);
-  save();renderHero();renderBoard();renderDrawer();
+  if(APPROVED.has(code))state.done=state.done.filter(c=>c!==code);else if(!isDone(code))state.done.push(code);
+  save();refresh();renderHero();renderBoard();renderDrawer();
+}
+function deriveExtras(){
+  if(!state.recs.length)return;
+  const optCodes=new Set((CUR?CUR.optativas:[]).map(c=>c.code));
+  const boardCodes=new Set(COURSES.map(c=>c.code));
+  const eqCodes=new Set(COURSES.flatMap(c=>leaves(c.eq)));
+  const compCodes=new Set((CUR?CUR.comp:[]).map(c=>c.code));
+  state.opt=state.recs.filter(r=>!boardCodes.has(r.code)&&!eqCodes.has(r.code)&&!compCodes.has(r.code)&&(r.tipo==='Op'||optCodes.has(r.code))).map(r=>({name:r.name,ha:r.ha,done:true,code:r.code}));
+  const comp=state.recs.filter(r=>compCodes.has(r.code)).map(r=>({name:r.name,ha:r.ha,done:true,code:r.code}));
+  state.comp=[...comp,...state.comp.filter(o=>!o.code)];
+}
+
+// ---------- Leitura dos PDFs ----------
+const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+let pdfReady=null;
+function loadScript(src){return new Promise((ok,fail)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=()=>fail(new Error('Não foi possível carregar o leitor de PDF. Confira a conexão e tente de novo.'));document.head.appendChild(s)})}
+function getPdfJs(){
+  if(!pdfReady)pdfReady=(async()=>{
+    await loadScript(PDFJS+'pdf.min.js');
+    await loadScript(PDFJS+'pdf.worker.min.js');
+    const lib=window.pdfjsLib||window['pdfjs-dist/build/pdf'];
+    lib.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js';
+    return lib;
+  })().catch(e=>{pdfReady=null;throw e});
+  return pdfReady;
+}
+async function pdfItems(file){
+  const lib=await getPdfJs();
+  const doc=await lib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+  const items=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const page=await doc.getPage(p),vp=page.getViewport({scale:1}),tc=await page.getTextContent();
+    tc.items.forEach(it=>{if(!it.str||!it.str.trim())return;items.push({p,pw:vp.width,x:it.transform[4],y:vp.height-it.transform[5],s:Math.hypot(it.transform[2],it.transform[3]),t:it.str})});
+  }
+  return items;
+}
+function renderFiles(){
+  const f=document.getElementById('files');
+  f.innerHTML=`<span class="tag ${CUR&&!state.demo?'ok':''}">${CUR&&!state.demo?`Currículo: ${esc(shortCourse())} ${CUR.curriculo.replace(/^(\d{4})(\d)$/,'$1.$2')}`:'Currículo do curso: falta enviar'}</span>
+    <span class="tag ${state.hist&&!state.demo?'ok':''}">${state.hist&&!state.demo?`Histórico: ${state.recs.length} aprovações${state.hist.iaa?`, IAA ${state.hist.iaa}`:''}`:'Histórico: falta enviar'}</span>`;
+}
+async function importFiles(files){
+  const out=document.getElementById('importOut');
+  files=[...files].filter(Boolean);if(!files.length)return;
+  out.innerHTML='<span class="soft">Lendo os PDFs…</span>';
+  try{
+    const parsed=[];
+    for(const file of files){
+      if(!/pdf$/i.test(file.name)&&file.type!=='application/pdf')throw new Error(`“${file.name}” não é um PDF.`);
+      const items=await pdfItems(file);
+      const text=items.map(i=>i.t).join(' ');
+      if(/CURR[ÍI]CULO DO CURSO/i.test(text))parsed.push({kind:'cur',data:parseCurriculum(items)});
+      else if(/HIST[ÓO]RICO/i.test(text))parsed.push({kind:'hist',data:parseHistoricoItems(items)});
+      else throw new Error(`Não reconheci “${file.name}”. Envie o Currículo do Curso ou o Histórico Síntese, baixados do CAGR.`);
+    }
+    if(state.demo){state=saved||blank();saved=null;setDemo(false)}
+    undoState=structuredClone(state);
+    const msgs=[];
+    parsed.filter(x=>x.kind==='cur').forEach(({data})=>{state.cur=data;state.done=state.done||[];refresh();msgs.push(`Currículo de ${shortCourse()} lido: ${data.courses.length} disciplinas obrigatórias em ${new Set(data.courses.map(c=>c.fase)).size} fases.`)});
+    refresh();
+    parsed.filter(x=>x.kind==='hist').forEach(({data})=>{
+      if(!data.recs.length)throw new Error('Não encontrei disciplinas no histórico. Confira se é o Histórico Síntese de Graduação.');
+      const ok=data.recs.filter(r=>r.nota>=6&&r.freq==='FS');
+      state.recs=[...new Map(ok.map(r=>[r.code,{code:r.code,name:r.name,ha:r.ha,tipo:r.tipo}])).values()];
+      state.done=state.recs.map(r=>r.code);
+      const okSet=new Set(state.done);
+      state.hist={iaa:data.iaa,form:data.form,curso:data.curso,reprov:[...new Map(data.recs.filter(r=>!(r.nota>=6&&r.freq==='FS')&&!okSet.has(r.code)&&r.tipo!=='Ex').map(r=>[r.code,`${r.name} (nota ${r.nota.toLocaleString('pt-BR')})`])).values()]};
+      msgs.push(`Histórico lido: ${state.recs.length} disciplinas aprovadas${data.iaa?`, IAA ${data.iaa}`:''}.`);
+    });
+    refresh();deriveExtras();
+    if(state.cur&&state.hist&&state.hist.curso&&!state.cur.curso.startsWith(state.hist.curso))msgs.push('Atenção: o histórico e o currículo parecem ser de cursos diferentes.');
+    save();selected=null;render();
+    document.getElementById('btnUndo').hidden=false;
+    const reprov=(state.hist&&state.hist.reprov)||[];
+    out.innerHTML=`<div class="msgs">${msgs.map(m=>`<p>${esc(m)}</p>`).join('')}</div>
+      ${reprov.length?`<details><summary>Reprovações ainda não recuperadas (${reprov.length})</summary><ul>${reprov.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></details>`:''}
+      ${!state.cur?'<p class="soft">Agora envie o Currículo do Curso para montar a grade.</p>':!state.hist?'<p class="soft">Agora envie o Histórico Síntese para marcar o que você já concluiu.</p>':''}`;
+  }catch(e){
+    out.innerHTML='<span class="err">'+esc(e&&e.message?e.message:'Não consegui ler o PDF.')+'</span>';
+  }
 }
 
 // ---------- Eventos ----------
+function setDemo(on){document.getElementById('demo').hidden=!on;document.getElementById('btnExample').hidden=on}
 const board=document.getElementById('board');
 board.addEventListener('click',e=>{
-  const t=e.target.closest('[data-toggle]');
-  if(t){e.stopPropagation();toggle(t.dataset.toggle);return}
-  const el=e.target.closest('.c');
-  if(el)select(selected===el.dataset.code?null:el.dataset.code);
+  const t=e.target.closest('[data-toggle]');if(t){e.stopPropagation();toggle(t.dataset.toggle);return}
+  const el=e.target.closest('.c');if(el)select(selected===el.dataset.code?null:el.dataset.code);
 });
 board.addEventListener('keydown',e=>{
   if(e.key!=='Enter'&&e.key!==' ')return;
-  const t=e.target.closest('[data-toggle]');
-  if(t){e.preventDefault();toggle(t.dataset.toggle);return}
+  const t=e.target.closest('[data-toggle]');if(t){e.preventDefault();toggle(t.dataset.toggle);return}
   const el=e.target.closest('.c');if(el){e.preventDefault();select(el.dataset.code)}
 });
 document.getElementById('strip').addEventListener('click',e=>{const b=e.target.closest('[data-code]');if(b)select(selected===b.dataset.code?null:b.dataset.code)});
@@ -505,109 +677,24 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('[data-del]');if(!b)return;
   state[b.dataset.del].splice(+b.dataset.i,1);save();renderHero();renderList(b.dataset.del);
 });
-document.getElementById('addOpt').onclick=()=>{state.opt.push({name:'Optativa '+(state.opt.length+1),ha:72,done:false});save();renderList('opt');renderHero()};
+document.getElementById('addOpt').onclick=()=>{state.opt.push({name:'Nova optativa',ha:72,done:false});save();renderList('opt');renderHero()};
 document.getElementById('addComp').onclick=()=>{state.comp.push({name:'Nova atividade',ha:10,done:false});save();renderList('comp');renderHero()};
-let saved=null;
-function setDemo(on){
-  document.getElementById('demo').hidden=!on;
-  document.getElementById('btnExample').hidden=on;
-}
-document.getElementById('btnExample').onclick=()=>{saved=state;state=structuredClone(EXAMPLE);state.demo=true;selected=null;render();setDemo(true);document.getElementById('importOut').innerHTML='';window.scrollTo({top:0,behavior:'smooth'})};
+document.getElementById('btnExample').onclick=()=>{
+  saved=state;
+  state=Object.assign(blank(),{cur:EXAMPLE_CUR,recs:EXAMPLE_RECS,done:EXAMPLE_RECS.map(r=>r.code),hist:{},demo:true,
+    comp:[{name:'Empresa júnior',ha:60,done:true},{name:'Centro acadêmico',ha:60,done:true},{name:'Outras atividades',ha:10,done:true}]});
+  refresh();deriveExtras();selected=null;render();setDemo(true);document.getElementById('importOut').innerHTML='';window.scrollTo({top:0,behavior:'smooth'});
+};
 document.getElementById('btnLeaveDemo').onclick=()=>{state=saved||load();saved=null;selected=null;render();setDemo(false)};
-document.getElementById('btnReset').onclick=()=>{setDemo(false);saved=null;state=structuredClone(EMPTY);selected=null;save();render();document.getElementById('importOut').innerHTML=''};
-
-// ---------- Importar histórico (PDF da UFSC) ----------
-const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
-let pdfReady=null, undoState=null;
-function loadScript(src){return new Promise((ok,fail)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=()=>fail(new Error('Não foi possível carregar o leitor de PDF.'));document.head.appendChild(s)})}
-function getPdfJs(){
-  if(!pdfReady)pdfReady=(async()=>{
-    await loadScript(PDFJS+'pdf.min.js');
-    await loadScript(PDFJS+'pdf.worker.min.js');
-    const lib=window.pdfjsLib||window['pdfjs-dist/build/pdf'];
-    lib.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js';
-    return lib;
-  })().catch(e=>{pdfReady=null;throw e});
-  return pdfReady;
-}
-async function pdfLines(buf){
-  const lib=await getPdfJs();
-  const doc=await lib.getDocument({data:buf}).promise;
-  const lines=[];
-  for(let p=1;p<=doc.numPages;p++){
-    const page=await doc.getPage(p);
-    const W=page.getViewport({scale:1}).width;
-    const tc=await page.getTextContent();
-    const rows=new Map();
-    tc.items.forEach(it=>{
-      if(!it.str||!it.str.trim())return;
-      const x=it.transform[4],y=it.transform[5],half=x<W/2?0:1,key=half+':'+Math.round(y/3);
-      if(!rows.has(key))rows.set(key,{half,y,items:[]});
-      rows.get(key).items.push({x,s:it.str});
-    });
-    [...rows.values()].sort((a,b)=>a.half-b.half||b.y-a.y).forEach(r=>{
-      lines.push(r.items.sort((a,b)=>a.x-b.x).map(i=>i.s.trim()).join(' ').replace(/\s+/g,' '));
-    });
-  }
-  return lines;
-}
-function parseHistorico(lines){
-  const rx=/([A-Z]{3}\d{4})\s+(.+?)\s+(\d{1,2}[.,]\d)\s+(\d{2,3})\s+(FS|FI)\s+(Ob|Op|Ex|Rv)\b/g;
-  const recs=[];
-  lines.forEach(l=>{let m;rx.lastIndex=0;while((m=rx.exec(l)))recs.push({code:m[1],name:m[2],nota:parseFloat(m[3].replace(',','.')),ha:+m[4],freq:m[5],tipo:m[6]})});
-  const text=lines.join(' ');
-  const iaa=[...text.matchAll(/IAA\s*-\s*(\d{1,2},\d{2})/g)].map(m=>m[1]).pop()||null;
-  const form=(text.match(/Prov[áa]vel semestre de formatura:?\s*(\d{4}\/\d)/)||[])[1]||null;
-  return {recs,iaa,form};
-}
-async function importPdf(file){
-  const out=document.getElementById('importOut');
-  if(!file)return;
-  if(!/pdf$/i.test(file.name)&&file.type!=='application/pdf'){out.innerHTML='<span class="err">Envie um arquivo PDF.</span>';return}
-  out.innerHTML='<span class="muted">Lendo o PDF…</span>';
-  try{
-    const {recs,iaa,form}=parseHistorico(await pdfLines(await file.arrayBuffer()));
-    if(!recs.length){out.innerHTML='<span class="err">Não encontrei disciplinas nesse PDF.</span> <span class="muted">Confira se é o Histórico Síntese de Graduação da UFSC.</span>';return}
-    const aprov=r=>r.nota>=6&&r.freq==='FS';
-    const okCodes=new Set(recs.filter(aprov).map(r=>r.code));
-    const doneGrid=COURSES.filter(c=>okCodes.has(c.code)).map(c=>c.code);
-    const uniq=a=>[...new Map(a.map(r=>[r.code,r])).values()];
-    const reprov=uniq(recs.filter(r=>!aprov(r)&&!okCodes.has(r.code)&&r.tipo!=='Ex'));
-    const opt=uniq(recs.filter(r=>r.tipo==='Op'&&aprov(r)));
-    const fora=uniq(recs.filter(r=>aprov(r)&&(r.tipo==='Ex'||(r.tipo==='Ob'&&!BY[r.code]))));
-    if(state.demo){state=saved||structuredClone(EMPTY);saved=null;setDemo(false)}
-    undoState=structuredClone(state);
-    state.done=doneGrid;
-    if(opt.length)state.opt=opt.map(r=>({name:`${r.code} – ${r.name}`,ha:r.ha,done:true}));
-    state.hist={iaa,formatura_prevista_no_historico:form,reprovacoes_pendentes:reprov.map(r=>`${r.code} ${r.name} (nota ${r.nota})`),aprovadas_fora_da_grade:fora.map(r=>`${r.code} ${r.name}`)};
-    save();selected=null;render();
-    document.getElementById('btnUndo').hidden=false;
-    const pend=COURSES.filter(c=>!isDone(c.code));
-    const li=a=>a.map(x=>`<li>${esc(x)}</li>`).join('');
-    out.innerHTML=`<div class="tags">
-        <span class="tag ok">Histórico importado</span>
-        <span class="tag num">${recs.length} registros lidos</span>
-        <span class="tag num">${doneGrid.length}/${COURSES.length} obrigatórias aprovadas</span>
-        ${iaa?`<span class="tag num">IAA ${iaa}</span>`:''}
-        ${form?`<span class="tag num">Formatura prevista no histórico: ${form}</span>`:''}
-        ${reprov.length?`<span class="tag bad num">${reprov.length} reprovação(ões) a recuperar</span>`:''}
-      </div>
-      ${reprov.length?`<details open><summary>Reprovações ainda não recuperadas</summary><ul>${li(reprov.map(r=>`${r.code} – ${r.name} (nota ${r.nota.toLocaleString('pt-BR')})`))}</ul></details>`:''}
-      <details><summary>Pendentes na grade (${pend.length})</summary><ul>${li(pend.map(c=>`${c.code} – ${c.name} · ${c.ha} h/a`))}</ul></details>
-      ${fora.length?`<details><summary>Aprovadas que não estão nesta grade (${fora.length})</summary><ul>${li(fora.map(r=>`${r.code} – ${r.name} (${r.tipo==='Ex'?'extracurso':'outro currículo'})`))}</ul></details>`:''}`;
-  }catch(e){
-    out.innerHTML='<span class="err">Não consegui ler o PDF.</span> <span class="muted">'+esc(e&&e.message?e.message:'')+'</span>';
-  }
-}
-document.getElementById('pdfIn').addEventListener('change',e=>{importPdf(e.target.files[0]);e.target.value=''});
+document.getElementById('btnReset').onclick=()=>{setDemo(false);saved=null;state=blank();selected=null;save();render();document.getElementById('importOut').innerHTML='';document.getElementById('btnUndo').hidden=true};
+document.getElementById('btnUndo').onclick=()=>{if(!undoState)return;state=undoState;undoState=null;save();render();document.getElementById('btnUndo').hidden=true;document.getElementById('importOut').innerHTML='<span class="soft">Importação desfeita.</span>'};
+document.getElementById('pdfIn').addEventListener('change',e=>{importFiles(e.target.files);e.target.value=''});
 const drop=document.getElementById('drop');
 ['dragenter','dragover'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add('over')}));
 ['dragleave','drop'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove('over')}));
-drop.addEventListener('drop',e=>importPdf(e.dataTransfer.files[0]));
-document.getElementById('btnUndo').onclick=()=>{if(!undoState)return;state=undoState;undoState=null;save();render();document.getElementById('btnUndo').hidden=true;document.getElementById('importOut').innerHTML='<span class="muted">Importação desfeita.</span>'};
+drop.addEventListener('drop',e=>importFiles(e.dataTransfer.files));
 
-
-render();
+state=load();render();
 const strip=document.getElementById('strip');strip.classList.add('fill');setTimeout(()=>strip.classList.remove('fill'),2600);
 </script>
 </body>
