@@ -118,6 +118,9 @@ body.nocur .hero,body.nocur .boardsec,body.nocur .extras{display:none}
 .importout details{margin-top:10px;font-size:14.5px}
 .importout summary{cursor:pointer;color:var(--soft)}
 .err{color:#b23a2b;font-weight:600}
+.warn{background:var(--amber-tint);border-radius:14px;padding:16px 18px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px}
+.warn b{font-size:16px}.warn p{font-size:14.5px;max-width:70ch}
+.wbtns{display:flex;gap:8px;flex-wrap:wrap}
 
 /* Quadro das fases */
 .board-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:20px}
@@ -764,13 +767,28 @@ async function importFiles(files){
       msgs.push(`Histórico lido: ${state.recs.length} disciplinas aprovadas${data.iaa?`, IAA ${data.iaa}`:''}.`);
     });
     refresh();deriveExtras();refresh();
-    if(state.cur&&state.hist&&state.hist.curso&&!state.cur.curso.startsWith(state.hist.curso))msgs.push('Atenção: o histórico e o currículo parecem ser de cursos diferentes.');
+    const curCode=state.cur?(state.cur.curso.match(/^\s*(\d+)/)||[])[1]:null;
+    const mismatch=!!(state.cur&&state.hist&&state.hist.curso&&curCode&&curCode!==state.hist.curso);
+    if(mismatch){
+      // de outro curso: só conta como optativa o que o currículo lista como optativa
+      const optCodes=new Set(state.cur.optativas.map(c=>c.code));
+      state.opt=state.opt.filter(o=>!o.code||optCodes.has(o.code));
+      state.mismatch={hist:state.hist.curso,cur:curCode,common:COURSES.filter(c=>isDone(c.code)).length};
+    } else state.mismatch=null;
     save();selected=null;render();
     document.getElementById('btnUndo').hidden=false;
     const reprov=(state.hist&&state.hist.reprov)||[];
-    out.innerHTML=`<div class="msgs">${msgs.map(m=>`<p>${esc(m)}</p>`).join('')}</div>
+    const mm=state.mismatch;
+    out.innerHTML=(mm?`<div class="warn"><b>O histórico e o currículo são de cursos diferentes.</b>
+        <p>O histórico é do curso ${esc(mm.hist)} e o currículo é do curso ${esc(mm.cur)}. Só contam as disciplinas com o mesmo código ou equivalentes: ${mm.common} ${mm.common===1?'disciplina obrigatória aproveitada':'disciplinas obrigatórias aproveitadas'}. Se você mudou de curso, isso mostra o que aproveita. Se não, provavelmente um dos PDFs está trocado.</p>
+        <div class="wbtns"><button class="btn-main" id="mmKeep">Manter assim</button><button id="mmUndo">Desfazer e enviar de novo</button></div></div>`:'')+`<div class="msgs">${msgs.map(m=>`<p>${esc(m)}</p>`).join('')}</div>
       ${reprov.length?`<details><summary>Reprovações ainda não recuperadas (${reprov.length})</summary><ul>${reprov.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></details>`:''}
-      ${!state.cur?'<p class="soft">Agora envie o Currículo do Curso para montar a grade.</p>':!state.hist?'<p class="soft">Agora envie o Histórico Síntese para marcar o que você já concluiu.</p>':''}`;
+      ${mm?'':''}${!state.cur?'<p class="soft">Agora envie o Currículo do Curso para montar a grade.</p>':!state.hist?'<p class="soft">Agora envie o Histórico Síntese para marcar o que você já concluiu.</p>':''}`;
+    if(mm){
+      document.getElementById('mmKeep').onclick=()=>{out.querySelector('.warn').remove()};
+      document.getElementById('mmUndo').onclick=()=>document.getElementById('btnUndo').click();
+      out.scrollIntoView({behavior:'smooth',block:'center'});
+    }
   }catch(e){
     out.innerHTML='<span class="err">'+esc(e&&e.message?e.message:'Não consegui ler o PDF.')+'</span>';
   }
