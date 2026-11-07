@@ -75,7 +75,7 @@ button:hover,.btn:hover{border-color:var(--soft)}
 .neck:hover{border:none;text-decoration-color:var(--ink)}
 
 /* Horas por categoria */
-.hours{display:grid;grid-template-columns:repeat(5,1fr);gap:28px;padding-top:24px;border-top:1px solid var(--rule)}
+.hours{display:grid;grid-template-columns:repeat(var(--cats,5),minmax(0,1fr));gap:28px;padding-top:24px;border-top:1px solid var(--rule)}
 .hours h3{font-size:15px;font-weight:600;letter-spacing:0}
 .hours p{font-size:14px;color:var(--soft);margin-top:2px}
 .meter{height:4px;border-radius:4px;background:var(--rule);margin-top:12px;overflow:hidden}
@@ -101,6 +101,8 @@ body.nocur .hero,body.nocur .boardsec,body.nocur .extras{display:none}
 .import .t h2{font-size:18px;letter-spacing:-.01em}
 .import .t p{font-size:14.5px;color:var(--soft);margin-top:2px;max-width:70ch}
 .importout{width:100%}
+.habsel{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-right:4px}
+.habsel select{font:inherit;font-weight:500;padding:6px 10px;border-radius:999px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);max-width:340px}
 .importout:empty{display:none}
 .tags{display:flex;flex-wrap:wrap;gap:8px}
 .tag{font-size:13.5px;padding:6px 12px;border-radius:999px;background:var(--sheet);border:1px solid var(--rule)}
@@ -302,77 +304,133 @@ function parseExpr(str){
   try{return orE()}catch(e){return null}
 }
 function leaves(e,out=[]){if(!e)return out;if(typeof e==='string')out.push(e);else e.args.forEach(x=>leaves(x,out));return out}
-function parseCurriculum(items){
-  const text=items.map(i=>i.t).join(' ');
+const ORD=['primeir','segund','terceir','quart','quint','sext','setim','oitav','non','decim'];
+const UNIT='(?:fase|semestre|per[ií]odo|etapa|m[óo]dulo|s[ée]rie|ano)';
+function faseNum(t){
+  let m=t.match(new RegExp('(\\d{1,2})\\s*[ªºao°]?\\.?\\s*'+UNIT+'\\b','i'))||t.match(new RegExp('\\b'+UNIT+'\\s*(\\d{1,2})\\b','i'));
+  if(m)return +m[1];
+  const n=t.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  if(!new RegExp(UNIT.normalize('NFD').replace(/[\u0300-\u036f]/g,''),'i').test(n))return 0;
+  let v=0;
+  if(/decim/.test(n)){v=10;const r=n.replace(/decim[ao]\s*/,'');const i=ORD.slice(0,9).findIndex(o=>r.includes(o));if(i>=0)v+=i+1;return v}
+  const i=ORD.findIndex(o=>new RegExp('\\b'+o+'[ao]?\\b').test(n)||n.startsWith(o));
+  return i>=0?i+1:0;
+}
+const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+function parseCurriculumRaw(items){
+  const text=items.map(i=>i.t).join(' ').replace(/\s+/g,' ');
   if(!/CURR[ÍI]CULO DO CURSO/i.test(text))throw new Error('Esse PDF não parece ser o Currículo do Curso da UFSC.');
-  const curso=(items.find(i=>/^\d+\s*-\s*.+\[/.test(i.t))||{}).t||'';
-  const curriculo=((text.match(/Curr[íi]culo:\s*(\d{5})/)||[])[1])||(items.find(i=>/^\d{5}$/.test(i.t))||{}).t||'';
-  const lines=groupLines(items.filter(i=>i.s>=7.6||/Fase|Optativas|Complementares/.test(i.t)));
-  let cols=null, section=null, fase=null, cur=null;
-  const courses=[];
-  const flush=()=>{if(cur){courses.push(cur);cur=null}};
+  const curso=(items.find(i=>/^\d+\s*-\s*\S/.test(i.t.trim())&&i.s>=8.5)||{}).t||'';
+  const curriculo=((text.match(/Curr[íi]culo:\s*(\d{5})/)||[])[1])||(items.find(i=>/^\d{5}$/.test(i.t.trim()))||{}).t||'';
+  const lines=groupLines(items.filter(i=>i.s>=7.6));
+  let cols=null, section=null, fase=null, cur=null, lastNameY=0, nameLines=0, hab='';
+  const rows=[], rols={};
+  const flush=()=>{if(cur){rows.push(cur);cur=null}};
   for(const ln of lines){
+    if(ln.items.some(i=>/SeTIC|P[áa]gina:|^Observa[çc][õo]es$|^Legenda:?$|^\d{2}\/\d{2}\/\d{4}/.test(i.t.trim()))){flush();if(ln.items.some(i=>/^Observa|^Legenda/.test(i.t.trim())))section='fim';continue}
+    const hb=ln.items.findIndex(i=>/^Habilita[çc][ãa]o:?$/.test(i.t.trim()));
+    if(hb>=0){const v=ln.items.slice(hb+1).map(i=>i.t.trim()).join(' ').trim();if(v&&v!==hab){flush();hab=v;section=null;fase=null}continue}
     const big=ln.items.find(i=>i.s>=11);
     if(big){
+      const t=big.t.trim();
+      if(/CURR[ÍI]CULO DO CURSO/i.test(t))continue;
       flush();
-      const m=big.t.match(/(\d+)\s*ª\s*Fase/i);
-      if(m){section='fase';fase=+m[1]}
-      else if(/Optativas/i.test(big.t)){section='opt';fase=null}
-      else if(/Complementares/i.test(big.t)){section='comp';fase=null}
-      else if(/CURR[ÍI]CULO/i.test(big.t)){/* cabeçalho de página */}
-      else {section='outro';fase=null}
+      const fn=faseNum(t);
+      if(fn){section='fase';fase=fn}
+      else if(/Optativa/i.test(t)){section='opt';fase=null}
+      else if(/Complementar|Acad[êe]mico.?Cient|Te[óo]ric/i.test(t)){section='comp';fase=null}
+      else {section='rol:'+t.replace(/^Rol de (disciplinas de )?/i,'').replace(/\s*-\s*PCC$/i,' (PCC)');fase=null;rols[section]=rols[section]||[]}
       continue;
     }
-    if(ln.items.some(i=>/SeTIC|P[áa]gina:|^Observa[çc][õo]es$|^Legenda:?$|^\d{2}\/\d{2}\/\d{4}/.test(i.t.trim()))){flush();if(ln.items.some(i=>/^Observa|^Legenda/.test(i.t.trim())))section='outro';continue}
-    const hd=ln.items.find(i=>/^Tipo$/.test(i.t));
-    if(hd&&ln.items.some(i=>/^H\/A$/.test(i.t))){
-      const at=rx=>{const f=ln.items.find(i=>rx.test(i.t));return f?f.x:null};
+    if(ln.items.some(i=>/^Tipo$/.test(i.t.trim()))&&ln.items.some(i=>/^H\/A$/.test(i.t.trim()))){
+      const at=rx=>{const f=ln.items.find(i=>rx.test(i.t.trim()));return f?f.x:null};
       cols={tipo:at(/^Tipo$/),ha:at(/^H\/A$/),aulas:at(/^Aulas$/),eq:at(/^Equivalentes$/),pre:at(/^Pr[ée]-Requisito$/),conj:at(/^Conjunto$/),prech:at(/^Pr[ée] CH$/)};
       flush();continue;
     }
-    if(!cols||!section||section==='outro')continue;
-    const cell=x=>x>=cols.prech-4?'prech':x>=cols.conj-4?'conj':x>=cols.pre-4?'pre':x>=cols.eq-4?'eq':x>=cols.aulas-4?'aulas':x>=cols.ha-6?'ha':x>=cols.tipo-4?'tipo':x>=cols.tipo-200&&x>60?'name':'code';
-    const first=ln.items[0];
-    if(cell(first.x)==='code'&&CODE_RX.test(first.t.trim())){
+    if(!cols||!section||section==='fim')continue;
+    const cell=x=>x>=cols.prech-4?'prech':x>=cols.conj-4?'conj':x>=cols.pre-4?'pre':x>=cols.eq-4?'eq':x>=cols.aulas-4?'aulas':x>=cols.ha-6?'ha':x>=cols.tipo-4?'tipo':x>60?'name':'code';
+    const first=ln.items[0], ft=first.t.trim();
+    if(cell(first.x)==='code'&&(CODE_RX.test(ft)||/^-+$/.test(ft))){
       flush();
-      cur={code:first.t.trim(),name:'',tipo:'',ha:0,aulas:0,eq:'',pre:'',conj:'',prech:'',fase,section};
+      cur={code:CODE_RX.test(ft)?ft:null,name:'',tipo:'',ha:0,aulas:0,eq:'',pre:'',conj:'',prech:'',fase,section,hab};
+      nameLines=0;lastNameY=ln.y;
     }
     if(!cur)continue;
     ln.items.forEach(it=>{
-      const c=cell(it.x);if(c==='code'&&it===first&&CODE_RX.test(it.t.trim()))return;
-      const t=it.t.trim();
-      if(c==='name')cur.name+=(cur.name?' ':'')+t;
-      else if(c==='tipo')cur.tipo=t;
-      else if(c==='ha')cur.ha=parseInt(t)||cur.ha;
-      else if(c==='aulas')cur.aulas=parseInt(t)||cur.aulas;
-      else cur[c]+=' '+t;
+      const c=cell(it.x),t=it.t.trim();
+      if(it===first&&c==='code')return;
+      if(c==='name'){
+        // continuação do nome só logo abaixo e curta; texto longo é descrição
+        if(nameLines===0||(ln.y-lastNameY<=12&&nameLines<3&&t.length<60)){cur.name+=(cur.name?' ':'')+t;nameLines++;lastNameY=ln.y}
+      }
+      else if(c==='tipo')cur.tipo=cur.tipo||t;
+      else if(c==='ha')cur.ha=cur.ha||parseInt(t)||0;
+      else if(c==='aulas')cur.aulas=cur.aulas||parseInt(t)||0;
+      else if(c!=='code')cur[c]+=' '+t;
     });
   }
   flush();
-  const list=courses.map(c=>{
-    const name=c.name.replace(/\s+/g,' ').trim();
-    let cat='obr';
-    if(c.section==='comp'||/Atividades Complementares/i.test(name))cat='comp';
-    else if(c.section==='opt'||/^Op/i.test(c.tipo))cat='opt';
-    else if(/Est[áa]gio/i.test(name))cat='est';
-    else if(/Trabalho de Conclus[ãa]o|^TCC/i.test(name))cat='tcc';
-    return {code:c.code,name,tipo:c.tipo,ha:c.ha,aulas:c.aulas,fase:c.fase,cat,
-      eq:parseExpr(c.eq),pre:parseExpr(c.pre),conj:(c.conj.match(/[A-Z]{3}\d{4}/g)||[]),prech:parseInt((c.prech.match(/\d+/)||[])[0])||0};
-  });
-  const sum=cat=>list.filter(c=>c.cat===cat&&c.fase).reduce((a,c)=>a+c.ha,0);
-  const num=rx=>{const m=text.match(rx);return m?parseInt(m[1]):0};
-  const req={
-    obr:num(/Disciplinas Obrigat[óo]rias:\s*(\d+)\s*horas/i)||sum('obr'),
-    est:num(/Est[áa]gio[^:]*:\s*(\d+)\s*horas/i)||sum('est'),
-    tcc:num(/Trabalho de Conclus[ãa]o[^:]*:\s*(\d+)\s*horas/i)||sum('tcc'),
-    opt:num(/Disciplinas Optativas:\s*(\d+)\s*horas/i)||num(/(\d+)\s*h-?a\s*\(?\d*h?\)?\s*de disciplinas optativas/i)||num(/no m[íi]nimo\s*(\d+)\s*h-?a/i),
-    comp:num(/Atividades Complementares:\s*(\d+)\s*horas/i)||num(/m[íi]nima de\s*(\d+)\s*hoa?s-aula/i)||(list.find(c=>c.cat==='comp')||{}).ha||0
+  const habs=[...new Set(rows.map(r=>r.hab))];
+  const isCombo=x=>/\be\b/i.test(x)&&/(bacharel|licenci)/i.test(x)&&habs.length>1;
+  let choices=habs.filter(x=>!isCombo(x)&&rows.some(r=>r.hab===x&&r.fase));
+  if(!choices.length)choices=habs.filter(x=>rows.some(r=>r.hab===x&&r.fase));
+  return {curso,curriculo,text,rows,rols,habs,choices};
+}
+function buildCurriculum(raw,habChoice){
+  const {curso,curriculo,text,rols,choices}=raw;
+  const hab=choices.includes(habChoice)?habChoice:(choices[0]||'');
+  const key=s=>(s.match(/bacharel\w*|licenci\w*|ciclo|tecnol\w*/gi)||[]).map(x=>x.toLowerCase().slice(0,7));
+  const keep=r=>{
+    if(choices.length<=1||r.hab===hab)return true;
+    if(choices.includes(r.hab))return false;
+    const k=key(hab);return k.length?key(r.hab).some(x=>k.includes(x)):true;
   };
-  const total=num(/Carga Hor[áa]ria Obrigat[óo]ria:\s*UFSC:\s*(\d+)/i)||num(/Total para Integraliza[çc][ãa]o[^:]*:\s*(\d+)/i);
-  // se a soma das obrigatórias por fase não bater com o resumo, confia nas fases
-  const board=list.filter(c=>c.fase&&c.cat!=='opt'&&c.cat!=='comp');
-  if(!board.length)throw new Error('Não encontrei disciplinas organizadas por fase nesse PDF.');
-  return {curso,curriculo,req,total,courses:board,optativas:list.filter(c=>c.cat==='opt'),comp:list.filter(c=>c.cat==='comp')};
+  const rows=raw.rows.filter(keep);
+  const list=[], slots=[];
+  rows.forEach(c=>{
+    const name=c.name.replace(/\s+/g,' ').trim();
+    if(!c.code){if(c.fase)slots.push({name,ha:c.ha});return}
+    let cat='obr';
+    if(c.section==='comp')cat='comp';
+    else if(c.section&&c.section.startsWith('rol:'))cat=/^Ob/i.test(c.tipo)?'comp':c.section;
+    else if(c.section==='opt'||/^Op/i.test(c.tipo))cat='opt';
+    else if(/Est[áa]gio|Internato/i.test(name))cat='est';
+    else if(/Trabalho de Conclus[ãa]o|^TCC\b/i.test(name))cat='tcc';
+    else if(!c.fase&&/^Ob/i.test(c.tipo))cat='comp';
+    list.push({code:c.code,name,tipo:c.tipo,ha:c.ha,aulas:c.aulas,fase:c.fase,cat,section:c.section,
+      eq:parseExpr(c.eq),pre:parseExpr(c.pre),conj:(c.conj.match(/[A-Z]{3}\d{4}/g)||[]),prech:parseInt((c.prech.match(/\d+/)||[])[0])||0});
+  });
+  const seen=new Set();const board=list.filter(c=>c.fase&&['obr','est','tcc'].includes(c.cat)&&!seen.has(c.code)&&seen.add(c.code));
+  if(!board.length)throw new Error('Esse currículo não tem disciplinas obrigatórias organizadas por fase. Pode ser um currículo antigo ou desativado: confira se baixou o currículo certo no CAGR.');
+  // quadro-resumo de horas, quando existe
+  const resumo={};
+  for(const m of text.matchAll(/-\s*([^:\-]{3,80}?):\s*(\d+)\s*horas?-?\s*aula/gi))resumo[norm(m[1])]=+m[2];
+  const fromResumo=rx=>{const k=Object.keys(resumo).find(k=>rx.test(k));return k?resumo[k]:0};
+  const num=rx=>{const m=text.match(rx);return m?parseInt(m[1]):0};
+  const total=num(/Total para Integraliza[çc][ãa]o[^:]*:\s*(\d+)/i)||num(/UFSC:\s*(\d+)\s*H\/A/i);
+  const sum=(arr,cat)=>arr.filter(c=>c.cat===cat).reduce((a,c)=>a+c.ha,0);
+  const req={obr:sum(board,'obr'),est:sum(board,'est'),tcc:sum(board,'tcc'),opt:0,comp:0};
+  const compCourses=list.filter(c=>c.cat==='comp');
+  // atividades exigidas fora das fases: seções de complementares, ou listas curtas com itens obrigatórios
+  const bySec={};compCourses.forEach(c=>{(bySec[c.section]=bySec[c.section]||[]).push(c)});
+  const compOb=Object.entries(bySec).flatMap(([s,cs])=>(s==='comp'||cs.length<=2)?cs.filter(c=>/^Ob/i.test(c.tipo)):[]);
+  compCourses.forEach(c=>{c.required=compOb.includes(c)});
+  const resComp=fromResumo(/complementar|teoric.*pratic|academico cient/);
+  req.comp=resComp?Math.max(resComp,compOb.filter(c=>c.section!=='comp').reduce((a,c)=>a+c.ha,0)+resComp):compOb.reduce((a,c)=>a+c.ha,0);
+  // vagas sem código: optativas ou listas especiais (ex.: PCC)
+  const extra=[];
+  const rolKeys=Object.keys(rols).filter(k=>list.some(c=>c.cat===k));
+  slots.forEach(s=>{
+    if(/optativ/i.test(s.name)){req.optSlots=(req.optSlots||0)+s.ha;return}
+    const base=norm(s.name).replace(/\s+[ivxl]+$/,'').replace(/\s+\d+$/,'');
+    const k=rolKeys.find(k=>norm(k).includes(base))||null;
+    if(k){const e=extra.find(x=>x.key===k)||(extra.push({key:k,label:k.slice(4).replace(/\s*\(PCC\)/,'').trim(),req:0,codes:list.filter(c=>c.cat===k).map(c=>c.code)}),extra[extra.length-1]);e.req+=s.ha}
+  });
+  req.opt=fromResumo(/optativ/)||num(/Optativas Profissionais:\s*(\d+)\s*H\/A/i)||req.optSlots||0;delete req.optSlots;
+  const known=req.obr+req.est+req.tcc+req.comp+extra.reduce((a,e)=>a+e.req,0);
+  if(!req.opt&&total>known)req.opt=total-known;
+  return {curso,curriculo,hab,choices,req,total,extra,courses:board,
+    optativas:list.filter(c=>c.cat==='opt'),comp:compCourses,rolCourses:list.filter(c=>c.cat.startsWith('rol:'))};
 }
 function parseHistoricoItems(items){
   // agrupa por linha e por metade da página (o histórico tem duas colunas)
@@ -387,27 +445,30 @@ function parseHistoricoItems(items){
     iaa:[...text.matchAll(/IAA\s*-\s*(\d{1,2},\d{2})/g)].map(m=>m[1]).pop()||null,
     form:(text.match(/Prov[áa]vel semestre de formatura:?\s*(\d{4}\/\d)/)||[])[1]||null,
     curso:(text.match(/Curso:\s*(\d+)/)||[])[1]||null,
-    curriculo:(text.match(/Curr[íi]culo:\s*(\d{4}\/\d)/)||[])[1]||null,
     isHist:/HIST[ÓO]RICO/i.test(text)
   };
 }
+function parseCurriculum(items,hab){return buildCurriculum(parseCurriculumRaw(items),hab)}
 
-
-const EXAMPLE_CUR={"curso":"236 - ENGENHARIA DE MATERIAIS [Semestral]","curriculo":"20181","req":{"obr":2916,"est":516,"tcc":288,"opt":474,"comp":126},"total":4320,"courses":[{"code":"EMC6711","name":"Introdução à Engenahria de Materiais","tipo":"Ob","ha":72,"aulas":4,"fase":1,"cat":"obr","eq":null,"pre":null,"conj":[],"prech":0},{"code":"ENS6122","name":"Elementos de Engenharia Ambiental","tipo":"Ob","ha":36,"aulas":2,"fase":1,"cat":"obr","eq":null,"pre":null,"conj":[],"prech":0},{"code":"FSC5101","name":"Física I","tipo":"Ob","ha":72,"aulas":4,"fase":1,"cat":"obr","eq":null,"pre":null,"conj":[],"prech":0},{"code":"GMT6603","name":"Desenho Técnico e CAD para Engenharia de Materiais","tipo":"Ob","ha":72,"aulas":4,"fase":1,"cat":"obr","eq":"EGR6603","pre":null,"conj":[],"prech":0},{"code":"MTM3110","name":"Cálculo 1","tipo":"Ob","ha":72,"aulas":4,"fase":1,"cat":"obr","eq":{"op":"or","args":["MTM3101","MTM5115","MTM5161"]},"pre":null,"conj":[],"prech":0},{"code":"QMC5125","name":"Química Geral Experimental A","tipo":"Ob","ha":36,"aulas":2,"fase":1,"cat":"obr","eq":null,"pre":null,"conj":[],"prech":0},{"code":"QMC5138","name":"Química Geral","tipo":"Ob","ha":36,"aulas":2,"fase":1,"cat":"obr","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6719","name":"Materiais e Microestruturas","tipo":"Ob","ha":72,"aulas":4,"fase":2,"cat":"obr","eq":null,"pre":"EMC6711","conj":[],"prech":0},{"code":"EMC6731","name":"Caracterização Microestrutural de Materiais","tipo":"Ob","ha":72,"aulas":4,"fase":2,"cat":"obr","eq":null,"pre":null,"conj":[],"prech":0},{"code":"FSC5002","name":"Física II","tipo":"Ob","ha":72,"aulas":4,"fase":2,"cat":"obr","eq":"FSC5112","pre":{"op":"or","args":[{"op":"and","args":["FSC5101","MTM3110"]},{"op":"and","args":["FSC5101","MTM3101"]}]},"conj":[],"prech":0},{"code":"MTM3120","name":"Cálculo 2","tipo":"Ob","ha":72,"aulas":4,"fase":2,"cat":"obr","eq":{"op":"or","args":[{"op":"and","args":["MTM3102","MTM3111"]},{"op":"and","args":["MTM3102","MTM5512"]},{"op":"and","args":["MTM5162","MTM5512"]},{"op":"and","args":["MTM3111","MTM5162"]},{"op":"and","args":["MTM3111","MTM5116"]},{"op":"and","args":["MTM5116","MTM5512"]},{"op":"and","args":["MTM5184","MTM5512"]}]},"pre":{"op":"or","args":["MTM3101","MTM3110"]},"conj":[],"prech":0},{"code":"MTM3121","name":"Álgebra Linear","tipo":"Ob","ha":72,"aulas":4,"fase":2,"cat":"obr","eq":{"op":"or","args":["MTM3112","MTM5245","MTM5247"]},"pre":null,"conj":[],"prech":0},{"code":"QMC6118","name":"Química para Engenharia de Materiais 2","tipo":"Ob","ha":72,"aulas":4,"fase":2,"cat":"obr","eq":null,"pre":"QMC5138","conj":[],"prech":0},{"code":"EMC5223","name":"Estatística e Metrologia para Engenheiros","tipo":"Ob","ha":72,"aulas":4,"fase":3,"cat":"obr","eq":null,"pre":{"op":"or","args":["MTM3101","MTM3110"]},"conj":[],"prech":0},{"code":"EMC6714","name":"Mecanismos de Deformação e Fratura","tipo":"Ob","ha":72,"aulas":4,"fase":3,"cat":"obr","eq":null,"pre":"EMC6719","conj":[],"prech":0},{"code":"EMC6715","name":"Metais Ferrosos e não Ferrosos","tipo":"Ob","ha":72,"aulas":4,"fase":3,"cat":"obr","eq":null,"pre":"EMC6719","conj":[],"prech":0},{"code":"EMC6716","name":"Materiais Poliméricos","tipo":"Ob","ha":72,"aulas":4,"fase":3,"cat":"obr","eq":null,"pre":{"op":"and","args":["EMC6711","QMC6118"]},"conj":[],"prech":0},{"code":"MTM3103","name":"Cálculo 3","tipo":"Ob","ha":72,"aulas":4,"fase":3,"cat":"obr","eq":null,"pre":{"op":"or","args":["MTM3102","MTM3120","MTM5162"]},"conj":[],"prech":0},{"code":"MTM3131","name":"Equações Diferenciais Ordinárias","tipo":"Ob","ha":72,"aulas":4,"fase":3,"cat":"obr","eq":{"op":"or","args":["MTM3102","MTM5117","MTM5163"]},"pre":{"op":"or","args":[{"op":"and","args":["MTM3120","MTM3121"]},{"op":"or","args":["MTM3101","MTM5162"]}]},"conj":[],"prech":0},{"code":"EMC6130","name":"Mecânica dos Sólidos para Engenharia de Materiais","tipo":"Ob","ha":72,"aulas":4,"fase":4,"cat":"obr","eq":null,"pre":{"op":"or","args":["MTM3102","MTM3120"]},"conj":[],"prech":0},{"code":"EMC6713","name":"Termodinâmica de Materiais","tipo":"Ob","ha":72,"aulas":4,"fase":4,"cat":"obr","eq":null,"pre":{"op":"or","args":["MTM3102","MTM3120"]},"conj":[],"prech":0},{"code":"EMC6733","name":"Análise Termofísica de Materiais","tipo":"Ob","ha":36,"aulas":2,"fase":4,"cat":"obr","eq":null,"pre":{"op":"and","args":["EMC6716","EMC6719"]},"conj":[],"prech":0},{"code":"EMC6734","name":"Propriedades Mecânicas","tipo":"Ob","ha":54,"aulas":3,"fase":4,"cat":"obr","eq":null,"pre":"EMC6714","conj":[],"prech":0},{"code":"EMC6735","name":"Caracterização de Materiais Poliméricos","tipo":"Ob","ha":36,"aulas":2,"fase":4,"cat":"obr","eq":null,"pre":"EMC6716","conj":[],"prech":0},{"code":"FSC5113","name":"Física III","tipo":"Ob","ha":72,"aulas":4,"fase":4,"cat":"obr","eq":null,"pre":{"op":"or","args":["MTM3101","MTM3110"]},"conj":[],"prech":0},{"code":"MTM3104","name":"Cálculo 4","tipo":"Ob","ha":72,"aulas":4,"fase":4,"cat":"obr","eq":null,"pre":{"op":"or","args":["MTM3102","MTM3120","MTM3131","MTM5163"]},"conj":[],"prech":0},{"code":"EMC5425","name":"Fenômenos de Transportes","tipo":"Ob","ha":72,"aulas":4,"fase":5,"cat":"obr","eq":null,"pre":{"op":"or","args":["FSC5002","MTM3102","MTM3120"]},"conj":[],"prech":0},{"code":"EMC6718","name":"Análise de Falhas em Materiais","tipo":"Ob","ha":36,"aulas":2,"fase":5,"cat":"obr","eq":null,"pre":"EMC6734","conj":[],"prech":0},{"code":"EMC6742","name":"Conformação Mecânica","tipo":"Ob","ha":54,"aulas":3,"fase":5,"cat":"obr","eq":null,"pre":"EMC6734","conj":[],"prech":0},{"code":"EMC6743","name":"Fundição","tipo":"Ob","ha":36,"aulas":2,"fase":5,"cat":"obr","eq":null,"pre":"EMC6715","conj":[],"prech":0},{"code":"EMC6744","name":"Processamento de Materiais Poliméricos","tipo":"Ob","ha":72,"aulas":4,"fase":5,"cat":"obr","eq":null,"pre":"EMC6716","conj":[],"prech":0},{"code":"EMC6746","name":"Materiais Vítreos","tipo":"Ob","ha":72,"aulas":4,"fase":5,"cat":"obr","eq":null,"pre":"EMC6719","conj":[],"prech":0},{"code":"FSC5114","name":"Física IV","tipo":"Ob","ha":72,"aulas":4,"fase":5,"cat":"obr","eq":null,"pre":"FSC5113","conj":[],"prech":0},{"code":"EMC6551","name":"Estágio Supervisionado 1","tipo":"Ob","ha":258,"aulas":14,"fase":6,"cat":"est","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6717","name":"Estrutura e Propriedades de Materiais Cerâmicos","tipo":"Ob","ha":72,"aulas":4,"fase":7,"cat":"obr","eq":null,"pre":"EMC6746","conj":[],"prech":0},{"code":"EMC6726","name":"Ferramentas da Qualidade","tipo":"Ob","ha":36,"aulas":2,"fase":7,"cat":"obr","eq":null,"pre":"EMC5223","conj":[],"prech":0},{"code":"EMC6747","name":"Soldagem","tipo":"Ob","ha":36,"aulas":2,"fase":7,"cat":"obr","eq":null,"pre":"EMC6715","conj":[],"prech":0},{"code":"EMC6748","name":"Usinagem","tipo":"Ob","ha":36,"aulas":2,"fase":7,"cat":"obr","eq":null,"pre":"EMC6715","conj":[],"prech":0},{"code":"EMC6749","name":"Engenharia de Superfície","tipo":"Ob","ha":72,"aulas":4,"fase":7,"cat":"obr","eq":null,"pre":{"op":"and","args":["EMC6713","EMC6719","EMC6731"]},"conj":[],"prech":0},{"code":"EQA6745","name":"Processamento de Materiais Cerâmicos","tipo":"Ob","ha":72,"aulas":4,"fase":7,"cat":"obr","eq":null,"pre":"EMC6746","conj":[],"prech":0},{"code":"FSC6062","name":"Física dos Materiais","tipo":"Ob","ha":90,"aulas":5,"fase":7,"cat":"obr","eq":null,"pre":"FSC5114","conj":[],"prech":0},{"code":"INE5201","name":"Introdução à Ciência da Computação","tipo":"Ob","ha":54,"aulas":3,"fase":7,"cat":"obr","eq":null,"pre":{"op":"or","args":["MTM3101","MTM3110"]},"conj":[],"prech":0},{"code":"EMC6552","name":"Estágio Supervisionado 2","tipo":"Ob","ha":258,"aulas":14,"fase":8,"cat":"est","eq":null,"pre":"EMC6551","conj":[],"prech":0},{"code":"EGC6021","name":"Engenharia e Gestão do Conhecimento","tipo":"Ob","ha":72,"aulas":4,"fase":9,"cat":"obr","eq":null,"pre":"EMC6551","conj":[],"prech":0},{"code":"EMC6763","name":"Materiais Sinterizados","tipo":"Ob","ha":54,"aulas":3,"fase":9,"cat":"obr","eq":null,"pre":{"op":"and","args":["EMC6713","EQA6745"]},"conj":[],"prech":0},{"code":"EMC6771","name":"Trabalho de Conclusão de Curso 1","tipo":"Ob","ha":36,"aulas":2,"fase":9,"cat":"tcc","eq":null,"pre":"EMC6551","conj":[],"prech":0},{"code":"EMC6900","name":"Técnicas de Simulação Numérica para Engenharia de Materiais","tipo":"Ob","ha":36,"aulas":2,"fase":9,"cat":"obr","eq":null,"pre":{"op":"and","args":["EMC5425","EMC6130","INE5201","MTM3104"]},"conj":[],"prech":0},{"code":"EMC6901","name":"Ciência, Tecnologia e Sociedade","tipo":"Ob","ha":72,"aulas":4,"fase":9,"cat":"obr","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6902","name":"Processo de Desenvolvimento de Produtos","tipo":"Ob","ha":54,"aulas":3,"fase":9,"cat":"obr","eq":null,"pre":{"op":"and","args":["EMC6742","EMC6744","EQA6745"]},"conj":[],"prech":0},{"code":"EQA6900","name":"Introdução à Modelagem e Simulação de Materiais","tipo":"Ob","ha":72,"aulas":4,"fase":9,"cat":"obr","eq":null,"pre":{"op":"and","args":["EMC6713","INE5201","MTM3104"]},"conj":[],"prech":0},{"code":"EMC6772","name":"Trabalho de Conclusão de Curso 2","tipo":"Ob","ha":252,"aulas":14,"fase":10,"cat":"tcc","eq":null,"pre":"EMC6771","conj":[],"prech":0}],"optativas":[{"code":"EGC5015","name":"Teoria Geral de Sistemas","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EGC5027","name":"Criatividade e Inovação","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EGC5028","name":"Habitats de Inovação","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EGC6022","name":"Engenharia e Gestão da Inovação","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EGC6710","name":"Governança do Conhecimento para a Inovação","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EGC6711","name":"Planejamento da Cadeia de Valor em Organização Industrial","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC5217","name":"Trabalho em Chapas","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":"EMC6742","conj":[],"prech":0},{"code":"EMC5763","name":"Materiais Sinterizados: tecnologia de fabricação, produtos e aplicações","tipo":"Op","ha":56,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6001","name":"Programa de Intercâmbio I","tipo":"Op","ha":0,"aulas":0,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6002","name":"Programa de Intercâmbio II","tipo":"Op","ha":0,"aulas":0,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6003","name":"Programa de Intercâmbio III","tipo":"Op","ha":0,"aulas":0,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6004","name":"Programa de Intercâmbio IV","tipo":"Op","ha":0,"aulas":0,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6005","name":"Disciplina de Iniciação Científica","tipo":"Op","ha":0,"aulas":0,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6006","name":"Disciplina de Pós-Graduação I","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6007","name":"Disciplina de Pós-Graduação II","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6008","name":"Tópicos Especiais 1","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6009","name":"Tópicos Especiais 2","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6010","name":"Tópicos Especiais 3","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6011","name":"Tópicos Especiais 4","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6012","name":"Tópicos Especiais 5","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6013","name":"Tópicos Especiais 6","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6015","name":"Tópicos Especiais Avançados 2","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6016","name":"Tópicos Especiais Avançados 3","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6017","name":"Tópicos Especiais Avançados 4","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6018","name":"Tópicos Especiais Avançados 5","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6019","name":"Tópicos Especiais Avançados 6","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6020","name":"Tópicos Especiais Avançados 7","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6021","name":"Tópicos Especiais Avançados 8","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6022","name":"Tópicos Especiais Avançados 9","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6553","name":"Estágio Supervisionado 3","tipo":"Op","ha":258,"aulas":14,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6706","name":"Materiais Compósitos","tipo":"Op","ha":54,"aulas":2,"fase":null,"cat":"opt","eq":null,"pre":"EMC6744","conj":[],"prech":0},{"code":"EMC6710","name":"Técnicas de Aquisição e Tratamento de Dados","tipo":"Op","ha":54,"aulas":2,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6712","name":"Eletroquímica e Corrosão","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":"QMC5138","conj":[],"prech":0},{"code":"EMC6720","name":"Materiais Magnéticos","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":"FSC6062","conj":[],"prech":0},{"code":"EMC6721","name":"Valorização de Resíduos e Desenvolvimento de Novos Produtos","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":"ENS6122","conj":[],"prech":0},{"code":"EMC6722","name":"Introdução à Tribologia","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","eq":null,"pre":"EMC6749","conj":[],"prech":0},{"code":"EMC6723","name":"Soldagem e Automação","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","eq":null,"pre":"EMC6747","conj":[],"prech":0},{"code":"EMC6728","name":"Introdução à Segurança do Trabalho","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"INE6730","name":"Métodos Estatísticos para Engenharia de Materiais","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":{"op":"or","args":["MTM3101","MTM3110"]},"conj":[],"prech":0},{"code":"LSB7904","name":"Língua Brasileira de Sinais I (PCC 18horas- aula)","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","eq":null,"pre":null,"conj":[],"prech":0}],"comp":[{"code":"EMC6000","name":"Atividades Complementares","tipo":"Ob","ha":126,"aulas":7,"fase":null,"cat":"comp","eq":null,"pre":null,"conj":[],"prech":0}]};
+const EXAMPLE_CUR={"curso":"236 - ENGENHARIA DE MATERIAIS [Semestral]","curriculo":"20181","hab":"Engenharia de Materiais","choices":["Engenharia de Materiais"],"req":{"obr":2916,"est":516,"tcc":288,"opt":474,"comp":126},"total":4320,"extra":[],"courses":[{"code":"EMC6711","name":"Introdução à Engenahria de Materiais","tipo":"Ob","ha":72,"aulas":4,"fase":1,"cat":"obr","section":"fase","eq":null,"pre":null,"conj":[],"prech":0},{"code":"ENS6122","name":"Elementos de Engenharia Ambiental","tipo":"Ob","ha":36,"aulas":2,"fase":1,"cat":"obr","section":"fase","eq":null,"pre":null,"conj":[],"prech":0},{"code":"FSC5101","name":"Física I","tipo":"Ob","ha":72,"aulas":4,"fase":1,"cat":"obr","section":"fase","eq":null,"pre":null,"conj":[],"prech":0},{"code":"GMT6603","name":"Desenho Técnico e CAD para Engenharia de Materiais","tipo":"Ob","ha":72,"aulas":4,"fase":1,"cat":"obr","section":"fase","eq":"EGR6603","pre":null,"conj":[],"prech":0},{"code":"MTM3110","name":"Cálculo 1","tipo":"Ob","ha":72,"aulas":4,"fase":1,"cat":"obr","section":"fase","eq":{"op":"or","args":["MTM3101","MTM5115","MTM5161"]},"pre":null,"conj":[],"prech":0},{"code":"QMC5125","name":"Química Geral Experimental A","tipo":"Ob","ha":36,"aulas":2,"fase":1,"cat":"obr","section":"fase","eq":null,"pre":null,"conj":[],"prech":0},{"code":"QMC5138","name":"Química Geral","tipo":"Ob","ha":36,"aulas":2,"fase":1,"cat":"obr","section":"fase","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6719","name":"Materiais e Microestruturas","tipo":"Ob","ha":72,"aulas":4,"fase":2,"cat":"obr","section":"fase","eq":null,"pre":"EMC6711","conj":[],"prech":0},{"code":"EMC6731","name":"Caracterização Microestrutural de Materiais","tipo":"Ob","ha":72,"aulas":4,"fase":2,"cat":"obr","section":"fase","eq":null,"pre":null,"conj":[],"prech":0},{"code":"FSC5002","name":"Física II","tipo":"Ob","ha":72,"aulas":4,"fase":2,"cat":"obr","section":"fase","eq":"FSC5112","pre":{"op":"or","args":[{"op":"and","args":["FSC5101","MTM3110"]},{"op":"and","args":["FSC5101","MTM3101"]}]},"conj":[],"prech":0},{"code":"MTM3120","name":"Cálculo 2","tipo":"Ob","ha":72,"aulas":4,"fase":2,"cat":"obr","section":"fase","eq":{"op":"or","args":[{"op":"and","args":["MTM3102","MTM3111"]},{"op":"and","args":["MTM3102","MTM5512"]},{"op":"and","args":["MTM5162","MTM5512"]},{"op":"and","args":["MTM3111","MTM5162"]},{"op":"and","args":["MTM3111","MTM5116"]},{"op":"and","args":["MTM5116","MTM5512"]},{"op":"and","args":["MTM5184","MTM5512"]}]},"pre":{"op":"or","args":["MTM3101","MTM3110"]},"conj":[],"prech":0},{"code":"MTM3121","name":"Álgebra Linear","tipo":"Ob","ha":72,"aulas":4,"fase":2,"cat":"obr","section":"fase","eq":{"op":"or","args":["MTM3112","MTM5245","MTM5247"]},"pre":null,"conj":[],"prech":0},{"code":"QMC6118","name":"Química para Engenharia de Materiais 2","tipo":"Ob","ha":72,"aulas":4,"fase":2,"cat":"obr","section":"fase","eq":null,"pre":"QMC5138","conj":[],"prech":0},{"code":"EMC5223","name":"Estatística e Metrologia para Engenheiros","tipo":"Ob","ha":72,"aulas":4,"fase":3,"cat":"obr","section":"fase","eq":null,"pre":{"op":"or","args":["MTM3101","MTM3110"]},"conj":[],"prech":0},{"code":"EMC6714","name":"Mecanismos de Deformação e Fratura","tipo":"Ob","ha":72,"aulas":4,"fase":3,"cat":"obr","section":"fase","eq":null,"pre":"EMC6719","conj":[],"prech":0},{"code":"EMC6715","name":"Metais Ferrosos e não Ferrosos","tipo":"Ob","ha":72,"aulas":4,"fase":3,"cat":"obr","section":"fase","eq":null,"pre":"EMC6719","conj":[],"prech":0},{"code":"EMC6716","name":"Materiais Poliméricos","tipo":"Ob","ha":72,"aulas":4,"fase":3,"cat":"obr","section":"fase","eq":null,"pre":{"op":"and","args":["EMC6711","QMC6118"]},"conj":[],"prech":0},{"code":"MTM3103","name":"Cálculo 3","tipo":"Ob","ha":72,"aulas":4,"fase":3,"cat":"obr","section":"fase","eq":null,"pre":{"op":"or","args":["MTM3102","MTM3120","MTM5162"]},"conj":[],"prech":0},{"code":"MTM3131","name":"Equações Diferenciais Ordinárias","tipo":"Ob","ha":72,"aulas":4,"fase":3,"cat":"obr","section":"fase","eq":{"op":"or","args":["MTM3102","MTM5117","MTM5163"]},"pre":{"op":"or","args":[{"op":"and","args":["MTM3120","MTM3121"]},{"op":"or","args":["MTM3101","MTM5162"]}]},"conj":[],"prech":0},{"code":"EMC6130","name":"Mecânica dos Sólidos para Engenharia de Materiais","tipo":"Ob","ha":72,"aulas":4,"fase":4,"cat":"obr","section":"fase","eq":null,"pre":{"op":"or","args":["MTM3102","MTM3120"]},"conj":[],"prech":0},{"code":"EMC6713","name":"Termodinâmica de Materiais","tipo":"Ob","ha":72,"aulas":4,"fase":4,"cat":"obr","section":"fase","eq":null,"pre":{"op":"or","args":["MTM3102","MTM3120"]},"conj":[],"prech":0},{"code":"EMC6733","name":"Análise Termofísica de Materiais","tipo":"Ob","ha":36,"aulas":2,"fase":4,"cat":"obr","section":"fase","eq":null,"pre":{"op":"and","args":["EMC6716","EMC6719"]},"conj":[],"prech":0},{"code":"EMC6734","name":"Propriedades Mecânicas","tipo":"Ob","ha":54,"aulas":3,"fase":4,"cat":"obr","section":"fase","eq":null,"pre":"EMC6714","conj":[],"prech":0},{"code":"EMC6735","name":"Caracterização de Materiais Poliméricos","tipo":"Ob","ha":36,"aulas":2,"fase":4,"cat":"obr","section":"fase","eq":null,"pre":"EMC6716","conj":[],"prech":0},{"code":"FSC5113","name":"Física III","tipo":"Ob","ha":72,"aulas":4,"fase":4,"cat":"obr","section":"fase","eq":null,"pre":{"op":"or","args":["MTM3101","MTM3110"]},"conj":[],"prech":0},{"code":"MTM3104","name":"Cálculo 4","tipo":"Ob","ha":72,"aulas":4,"fase":4,"cat":"obr","section":"fase","eq":null,"pre":{"op":"or","args":["MTM3102","MTM3120","MTM3131","MTM5163"]},"conj":[],"prech":0},{"code":"EMC5425","name":"Fenômenos de Transportes","tipo":"Ob","ha":72,"aulas":4,"fase":5,"cat":"obr","section":"fase","eq":null,"pre":{"op":"or","args":["FSC5002","MTM3102","MTM3120"]},"conj":[],"prech":0},{"code":"EMC6718","name":"Análise de Falhas em Materiais","tipo":"Ob","ha":36,"aulas":2,"fase":5,"cat":"obr","section":"fase","eq":null,"pre":"EMC6734","conj":[],"prech":0},{"code":"EMC6742","name":"Conformação Mecânica","tipo":"Ob","ha":54,"aulas":3,"fase":5,"cat":"obr","section":"fase","eq":null,"pre":"EMC6734","conj":[],"prech":0},{"code":"EMC6743","name":"Fundição","tipo":"Ob","ha":36,"aulas":2,"fase":5,"cat":"obr","section":"fase","eq":null,"pre":"EMC6715","conj":[],"prech":0},{"code":"EMC6744","name":"Processamento de Materiais Poliméricos","tipo":"Ob","ha":72,"aulas":4,"fase":5,"cat":"obr","section":"fase","eq":null,"pre":"EMC6716","conj":[],"prech":0},{"code":"EMC6746","name":"Materiais Vítreos","tipo":"Ob","ha":72,"aulas":4,"fase":5,"cat":"obr","section":"fase","eq":null,"pre":"EMC6719","conj":[],"prech":0},{"code":"FSC5114","name":"Física IV","tipo":"Ob","ha":72,"aulas":4,"fase":5,"cat":"obr","section":"fase","eq":null,"pre":"FSC5113","conj":[],"prech":0},{"code":"EMC6551","name":"Estágio Supervisionado 1","tipo":"Ob","ha":258,"aulas":14,"fase":6,"cat":"est","section":"fase","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6717","name":"Estrutura e Propriedades de Materiais Cerâmicos","tipo":"Ob","ha":72,"aulas":4,"fase":7,"cat":"obr","section":"fase","eq":null,"pre":"EMC6746","conj":[],"prech":0},{"code":"EMC6726","name":"Ferramentas da Qualidade","tipo":"Ob","ha":36,"aulas":2,"fase":7,"cat":"obr","section":"fase","eq":null,"pre":"EMC5223","conj":[],"prech":0},{"code":"EMC6747","name":"Soldagem","tipo":"Ob","ha":36,"aulas":2,"fase":7,"cat":"obr","section":"fase","eq":null,"pre":"EMC6715","conj":[],"prech":0},{"code":"EMC6748","name":"Usinagem","tipo":"Ob","ha":36,"aulas":2,"fase":7,"cat":"obr","section":"fase","eq":null,"pre":"EMC6715","conj":[],"prech":0},{"code":"EMC6749","name":"Engenharia de Superfície","tipo":"Ob","ha":72,"aulas":4,"fase":7,"cat":"obr","section":"fase","eq":null,"pre":{"op":"and","args":["EMC6713","EMC6719","EMC6731"]},"conj":[],"prech":0},{"code":"EQA6745","name":"Processamento de Materiais Cerâmicos","tipo":"Ob","ha":72,"aulas":4,"fase":7,"cat":"obr","section":"fase","eq":null,"pre":"EMC6746","conj":[],"prech":0},{"code":"FSC6062","name":"Física dos Materiais","tipo":"Ob","ha":90,"aulas":5,"fase":7,"cat":"obr","section":"fase","eq":null,"pre":"FSC5114","conj":[],"prech":0},{"code":"INE5201","name":"Introdução à Ciência da Computação","tipo":"Ob","ha":54,"aulas":3,"fase":7,"cat":"obr","section":"fase","eq":null,"pre":{"op":"or","args":["MTM3101","MTM3110"]},"conj":[],"prech":0},{"code":"EMC6552","name":"Estágio Supervisionado 2","tipo":"Ob","ha":258,"aulas":14,"fase":8,"cat":"est","section":"fase","eq":null,"pre":"EMC6551","conj":[],"prech":0},{"code":"EGC6021","name":"Engenharia e Gestão do Conhecimento","tipo":"Ob","ha":72,"aulas":4,"fase":9,"cat":"obr","section":"fase","eq":null,"pre":"EMC6551","conj":[],"prech":0},{"code":"EMC6763","name":"Materiais Sinterizados","tipo":"Ob","ha":54,"aulas":3,"fase":9,"cat":"obr","section":"fase","eq":null,"pre":{"op":"and","args":["EMC6713","EQA6745"]},"conj":[],"prech":0},{"code":"EMC6771","name":"Trabalho de Conclusão de Curso 1","tipo":"Ob","ha":36,"aulas":2,"fase":9,"cat":"tcc","section":"fase","eq":null,"pre":"EMC6551","conj":[],"prech":0},{"code":"EMC6900","name":"Técnicas de Simulação Numérica para Engenharia de Materiais","tipo":"Ob","ha":36,"aulas":2,"fase":9,"cat":"obr","section":"fase","eq":null,"pre":{"op":"and","args":["EMC5425","EMC6130","INE5201","MTM3104"]},"conj":[],"prech":0},{"code":"EMC6901","name":"Ciência, Tecnologia e Sociedade","tipo":"Ob","ha":72,"aulas":4,"fase":9,"cat":"obr","section":"fase","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6902","name":"Processo de Desenvolvimento de Produtos","tipo":"Ob","ha":54,"aulas":3,"fase":9,"cat":"obr","section":"fase","eq":null,"pre":{"op":"and","args":["EMC6742","EMC6744","EQA6745"]},"conj":[],"prech":0},{"code":"EQA6900","name":"Introdução à Modelagem e Simulação de Materiais","tipo":"Ob","ha":72,"aulas":4,"fase":9,"cat":"obr","section":"fase","eq":null,"pre":{"op":"and","args":["EMC6713","INE5201","MTM3104"]},"conj":[],"prech":0},{"code":"EMC6772","name":"Trabalho de Conclusão de Curso 2","tipo":"Ob","ha":252,"aulas":14,"fase":10,"cat":"tcc","section":"fase","eq":null,"pre":"EMC6771","conj":[],"prech":0}],"optativas":[{"code":"EGC5015","name":"Teoria Geral de Sistemas","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EGC5027","name":"Criatividade e Inovação","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EGC5028","name":"Habitats de Inovação","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EGC6022","name":"Engenharia e Gestão da Inovação","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EGC6710","name":"Governança do Conhecimento para a Inovação","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EGC6711","name":"Planejamento da Cadeia de Valor em Organização Industrial","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC5217","name":"Trabalho em Chapas","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":"EMC6742","conj":[],"prech":0},{"code":"EMC5763","name":"Materiais Sinterizados: tecnologia de fabricação, produtos e aplicações","tipo":"Op","ha":56,"aulas":4,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6001","name":"Programa de Intercâmbio I","tipo":"Op","ha":0,"aulas":0,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6002","name":"Programa de Intercâmbio II","tipo":"Op","ha":0,"aulas":0,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6003","name":"Programa de Intercâmbio III","tipo":"Op","ha":0,"aulas":0,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6004","name":"Programa de Intercâmbio IV","tipo":"Op","ha":0,"aulas":0,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6005","name":"Disciplina de Iniciação Científica","tipo":"Op","ha":0,"aulas":0,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6006","name":"Disciplina de Pós-Graduação I","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6007","name":"Disciplina de Pós-Graduação II","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6008","name":"Tópicos Especiais 1","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6009","name":"Tópicos Especiais 2","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6010","name":"Tópicos Especiais 3","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6011","name":"Tópicos Especiais 4","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6012","name":"Tópicos Especiais 5","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6013","name":"Tópicos Especiais 6","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6015","name":"Tópicos Especiais Avançados 2","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6016","name":"Tópicos Especiais Avançados 3","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6017","name":"Tópicos Especiais Avançados 4","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6018","name":"Tópicos Especiais Avançados 5","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6019","name":"Tópicos Especiais Avançados 6","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6020","name":"Tópicos Especiais Avançados 7","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6021","name":"Tópicos Especiais Avançados 8","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6022","name":"Tópicos Especiais Avançados 9","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6553","name":"Estágio Supervisionado 3","tipo":"Op","ha":258,"aulas":14,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6706","name":"Materiais Compósitos","tipo":"Op","ha":54,"aulas":2,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":"EMC6744","conj":[],"prech":0},{"code":"EMC6710","name":"Técnicas de Aquisição e Tratamento de Dados","tipo":"Op","ha":54,"aulas":2,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"EMC6712","name":"Eletroquímica e Corrosão","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":"QMC5138","conj":[],"prech":0},{"code":"EMC6720","name":"Materiais Magnéticos","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":"FSC6062","conj":[],"prech":0},{"code":"EMC6721","name":"Valorização de Resíduos e Desenvolvimento de Novos Produtos","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":"ENS6122","conj":[],"prech":0},{"code":"EMC6722","name":"Introdução à Tribologia","tipo":"Op","ha":54,"aulas":3,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":"EMC6749","conj":[],"prech":0},{"code":"EMC6723","name":"Soldagem e Automação","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":"EMC6747","conj":[],"prech":0},{"code":"EMC6728","name":"Introdução à Segurança do Trabalho","tipo":"Op","ha":36,"aulas":2,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0},{"code":"INE6730","name":"Métodos Estatísticos para Engenharia de Materiais","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":{"op":"or","args":["MTM3101","MTM3110"]},"conj":[],"prech":0},{"code":"LSB7904","name":"Língua Brasileira de Sinais I (PCC 18horas- aula)","tipo":"Op","ha":72,"aulas":4,"fase":null,"cat":"opt","section":"opt","eq":null,"pre":null,"conj":[],"prech":0}],"comp":[{"code":"EMC6000","name":"Atividades Complementares","tipo":"Ob","ha":126,"aulas":7,"fase":null,"cat":"comp","section":"comp","eq":null,"pre":null,"conj":[],"prech":0,"required":true}],"rolCourses":[]};
 const EXAMPLE_RECS=[{"code":"EGR6603","name":"Desenho Técnico e CAD para Engenharia de Materiais","ha":72,"tipo":"Ob"},{"code":"EMC6711","name":"Introdução à Engenahria de Materiais","ha":72,"tipo":"Ob"},{"code":"MTM3100","name":"Pré-Cálculo","ha":72,"tipo":"Ob"},{"code":"MTM3111","name":"Geometria Analítica","ha":72,"tipo":"Ob"},{"code":"QMC5125","name":"Química Geral Experimental A","ha":36,"tipo":"Ob"},{"code":"QMC5138","name":"Química Geral","ha":36,"tipo":"Ob"},{"code":"EMC6719","name":"Materiais e Microestruturas","ha":72,"tipo":"Ob"},{"code":"EMC6731","name":"Caracterização Microestrutural de Materiais","ha":72,"tipo":"Ob"},{"code":"FSC5101","name":"Física I","ha":72,"tipo":"Ob"},{"code":"QMC6118","name":"Química para Engenharia de Materiais 2","ha":72,"tipo":"Ob"},{"code":"EMC6714","name":"Mecanismos de Deformação e Fratura","ha":72,"tipo":"Ob"},{"code":"EMC6715","name":"Metais Ferrosos e não Ferrosos","ha":72,"tipo":"Ob"},{"code":"EMC6716","name":"Materiais Poliméricos","ha":72,"tipo":"Ob"},{"code":"MTM3110","name":"Cálculo 1","ha":72,"tipo":"Ob"},{"code":"EMC6733","name":"Análise Termofísica de Materiais","ha":36,"tipo":"Ob"},{"code":"EMC6734","name":"Propriedades Mecânicas","ha":54,"tipo":"Ob"},{"code":"EMC6735","name":"Caracterização de Materiais Poliméricos","ha":36,"tipo":"Ob"},{"code":"EMC6744","name":"Processamento de Materiais Poliméricos","ha":72,"tipo":"Ob"},{"code":"MTM3120","name":"Cálculo 2","ha":72,"tipo":"Ob"},{"code":"EMC5425","name":"Fenômenos de Transportes","ha":72,"tipo":"Ob"},{"code":"EMC6746","name":"Materiais Vítreos","ha":72,"tipo":"Ob"},{"code":"ENS6122","name":"Elementos de Engenharia Ambiental","ha":36,"tipo":"Ob"},{"code":"FSC5002","name":"Física II","ha":72,"tipo":"Ob"},{"code":"MTM3103","name":"Cálculo 3","ha":72,"tipo":"Ob"},{"code":"EMC6713","name":"Termodinâmica de Materiais","ha":72,"tipo":"Ob"},{"code":"EMC6728","name":"Introdução à Segurança do Trabalho","ha":36,"tipo":"Op"},{"code":"EMC6743","name":"Fundição","ha":36,"tipo":"Ob"},{"code":"MTM3121","name":"Álgebra Linear","ha":72,"tipo":"Ob"},{"code":"EMC5223","name":"Estatística e Metrologia para Engenheiros","ha":72,"tipo":"Ob"},{"code":"INE5201","name":"Introdução à Ciência da Computação","ha":54,"tipo":"Ob"},{"code":"MTM3104","name":"Cálculo 4","ha":72,"tipo":"Ob"},{"code":"MTM3131","name":"Equações Diferenciais Ordinárias","ha":72,"tipo":"Ob"},{"code":"EMC6717","name":"Estrutura e Propriedades de Materiais Cerâmicos","ha":72,"tipo":"Ob"},{"code":"EMC6726","name":"Ferramentas da Qualidade","ha":36,"tipo":"Ob"},{"code":"EMC6747","name":"Soldagem","ha":36,"tipo":"Ob"},{"code":"EMC6748","name":"Usinagem","ha":36,"tipo":"Ob"},{"code":"EQA6745","name":"Processamento de Materiais Cerâmicos","ha":72,"tipo":"Ob"},{"code":"EMC6551","name":"Estágio Supervisionado 1","ha":258,"tipo":"Ob"},{"code":"EGC6021","name":"Engenharia e Gestão do Conhecimento","ha":72,"tipo":"Ob"},{"code":"EMC6742","name":"Conformação Mecânica","ha":54,"tipo":"Ob"},{"code":"EMC6763","name":"Materiais Sinterizados","ha":54,"tipo":"Ob"},{"code":"EMC6771","name":"Trabalho de Conclusão de Curso 1","ha":36,"tipo":"Ob"},{"code":"FSC5113","name":"Física III","ha":72,"tipo":"Ob"},{"code":"PSI5112","name":"Relações Humanas","ha":36,"tipo":"Ex"}];
 
 // ---------- Estado ----------
-const CAT_LABEL={obr:'Obrigatórias',est:'Estágio',tcc:'TCC',opt:'Optativas',comp:'Complementares'};
+const BASE_LABEL={obr:'Obrigatórias',est:'Estágio',tcc:'TCC',opt:'Optativas',comp:'Complementares'};
+let CAT_LABEL={...BASE_LABEL};
 const KEY='grade-ufsc-v2';
 let state, selected=null, saved=null, undoState=null;
 let CUR=null, COURSES=[], BY={}, REQ={obr:0,est:0,tcc:0,opt:0,comp:0}, DEPS={}, APPROVED=new Set(), FASES=[];
-const blank=()=>({cur:null,recs:[],done:[],opt:[],comp:[],hist:null});
+const blank=()=>({cur:null,curs:null,recs:[],done:[],opt:[],comp:[],hist:null});
 function load(){try{const s=localStorage.getItem(KEY);if(s)return Object.assign(blank(),JSON.parse(s))}catch(e){}return blank()}
 function save(){if(state.demo)return;try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
 function refresh(){
   CUR=state.cur;COURSES=CUR?CUR.courses:[];
   BY=Object.fromEntries(COURSES.map(c=>[c.code,c]));
-  REQ=CUR?CUR.req:{obr:0,est:0,tcc:0,opt:0,comp:0};
+  REQ=CUR?{...CUR.req}:{obr:0,est:0,tcc:0,opt:0,comp:0};
+  CAT_LABEL={...BASE_LABEL};
+  (CUR&&CUR.extra||[]).forEach(e=>{REQ[e.key]=e.req;CAT_LABEL[e.key]=e.label});
+  if(CUR&&/Internato/i.test(JSON.stringify(COURSES.filter(c=>c.cat==='est').map(c=>c.name))))CAT_LABEL.est='Estágio e internato';
   DEPS={};COURSES.forEach(c=>[...new Set(leaves(c.pre))].forEach(p=>{if(BY[p])(DEPS[p]=DEPS[p]||[]).push(c.code)}));
   FASES=[...new Set(COURSES.map(c=>c.fase))].sort((a,b)=>a-b);
   APPROVED=new Set(state.done);
@@ -424,6 +485,7 @@ function totals(){
   COURSES.forEach(c=>{if(isDone(c.code))t[c.cat]+=c.ha});
   state.opt.forEach(o=>{if(o.done)t.opt+=+o.ha||0});
   state.comp.forEach(o=>{if(o.done)t.comp+=+o.ha||0});
+  (CUR&&CUR.extra||[]).forEach(e=>{t[e.key]=state.recs.filter(r=>e.codes.includes(r.code)).reduce((a,r)=>a+r.ha,0)});
   return t;
 }
 const hoursTotal=()=>Object.values(totals()).reduce((a,b)=>a+b,0);
@@ -441,7 +503,7 @@ function missingText(c){
   if(c.prech&&hoursTotal()<c.prech)parts.push(`ter ${fmt(c.prech)} h/a concluídas`);
   return parts.join(' e ');
 }
-const shortCourse=()=>CUR?CUR.curso.replace(/^\d+\s*-\s*/,'').replace(/\s*\[.*\]\s*$/,'').toLowerCase().replace(/(^|\s)(\p{L})/gu,(m,a,b)=>a+b.toUpperCase()).replace(/\s(De|Da|Do|Das|Dos|E)\s/g,m=>m.toLowerCase()):'';
+const shortCourse=()=>CUR?CUR.curso.replace(/^\d+\s*-\s*/,'').replace(/\s*\[.*\]\s*$/,'').replace(/\s*\((.*)\)\s*$/,' – $1').toLowerCase().replace(/(^|\s)(\p{L})/gu,(m,a,b)=>a+b.toUpperCase()).replace(/\s(De|Da|Do|Das|Dos|E)\s/g,m=>m.toLowerCase()):'';
 
 // ---------- Resumo ----------
 function bottleneck(){return COURSES.filter(c=>!isDone(c.code)).map(c=>({c,n:allDependents(c.code).size})).sort((a,b)=>b.n-a.n||a.c.fase-b.c.fase)[0]}
@@ -453,10 +515,10 @@ function renderHero(){
   for(const k of Object.keys(CAT_LABEL)){
     if(!REQ[k])continue;
     const got=Math.min(t[k],REQ[k]);num+=got;den+=REQ[k];
-    hrs+=`<div><h3>${CAT_LABEL[k]}</h3><p class="num">${fmt(t[k])} de ${fmt(REQ[k])} h/a</p><div class="meter"><i style="width:${got/REQ[k]*100}%"></i></div></div>`;
+    hrs+=`<div><h3>${esc(CAT_LABEL[k])}</h3><p class="num">${fmt(t[k])} de ${fmt(REQ[k])} h/a</p><div class="meter"><i style="width:${got/REQ[k]*100}%"></i></div></div>`;
   }
   document.getElementById('hours').innerHTML=hrs;
-  document.getElementById('hours').style.gridTemplateColumns=`repeat(${Object.keys(CAT_LABEL).filter(k=>REQ[k]).length},1fr)`;
+  document.getElementById('hours').style.setProperty('--cats',Object.keys(CAT_LABEL).filter(k=>REQ[k]).length);
   const p=den?Math.floor(num/den*100):0;
   const pend=COURSES.filter(c=>!isDone(c.code));
   document.getElementById('headline').textContent=`${p}% do curso concluído`;
@@ -571,14 +633,18 @@ function toggle(code){
   save();refresh();renderHero();renderBoard();renderDrawer();
 }
 function deriveExtras(){
-  if(!state.recs.length)return;
+  if(!CUR)return;
   const optCodes=new Set((CUR?CUR.optativas:[]).map(c=>c.code));
   const boardCodes=new Set(COURSES.map(c=>c.code));
   const eqCodes=new Set(COURSES.flatMap(c=>leaves(c.eq)));
   const compCodes=new Set((CUR?CUR.comp:[]).map(c=>c.code));
-  state.opt=state.recs.filter(r=>!boardCodes.has(r.code)&&!eqCodes.has(r.code)&&!compCodes.has(r.code)&&(r.tipo==='Op'||optCodes.has(r.code))).map(r=>({name:r.name,ha:r.ha,done:true,code:r.code}));
-  const comp=state.recs.filter(r=>compCodes.has(r.code)).map(r=>({name:r.name,ha:r.ha,done:true,code:r.code}));
-  state.comp=[...comp,...state.comp.filter(o=>!o.code)];
+  const rolCodes=new Set((CUR.extra||[]).flatMap(e=>e.codes));
+  const recCodes=new Set(state.recs.map(r=>r.code));
+  const required=(CUR.comp||[]).filter(c=>c.required).map(c=>({name:c.name,ha:c.ha,done:recCodes.has(c.code),code:c.code}));
+  if(!state.recs.length){state.comp=[...required,...state.comp.filter(o=>!o.code)];return}
+  state.opt=state.recs.filter(r=>!boardCodes.has(r.code)&&!eqCodes.has(r.code)&&!compCodes.has(r.code)&&!rolCodes.has(r.code)&&(r.tipo==='Op'||optCodes.has(r.code))).map(r=>({name:r.name,ha:r.ha,done:true,code:r.code}));
+  const comp=state.recs.filter(r=>compCodes.has(r.code)&&!required.some(x=>x.code===r.code)).map(r=>({name:r.name,ha:r.ha,done:true,code:r.code}));
+  state.comp=[...required,...comp,...state.comp.filter(o=>!o.code)];
 }
 
 // ---------- Leitura dos PDFs ----------
@@ -607,7 +673,8 @@ async function pdfItems(file){
 }
 function renderFiles(){
   const f=document.getElementById('files');
-  f.innerHTML=`<span class="tag ${CUR&&!state.demo?'ok':''}">${CUR&&!state.demo?`Currículo: ${esc(shortCourse())} ${CUR.curriculo.replace(/^(\d{4})(\d)$/,'$1.$2')}`:'Currículo do curso: falta enviar'}</span>
+  const habs=state.curs&&!state.demo?Object.keys(state.curs):[];
+  f.innerHTML=(habs.length>1?`<label class="habsel">Habilitação <select id="habSel">${habs.map(k=>`<option value="${esc(k)}"${CUR&&CUR.hab===k?' selected':''}>${esc(k)}</option>`).join('')}</select></label>`:'')+`<span class="tag ${CUR&&!state.demo?'ok':''}">${CUR&&!state.demo?`Currículo: ${esc(shortCourse())} ${CUR.curriculo.replace(/^(\d{4})(\d)$/,'$1.$2')}`:'Currículo do curso: falta enviar'}</span>
     <span class="tag ${state.hist&&!state.demo?'ok':''}">${state.hist&&!state.demo?`Histórico: ${state.recs.length} aprovações${state.hist.iaa?`, IAA ${state.hist.iaa}`:''}`:'Histórico: falta enviar'}</span>`;
 }
 async function importFiles(files){
@@ -620,14 +687,19 @@ async function importFiles(files){
       if(!/pdf$/i.test(file.name)&&file.type!=='application/pdf')throw new Error(`“${file.name}” não é um PDF.`);
       const items=await pdfItems(file);
       const text=items.map(i=>i.t).join(' ');
-      if(/CURR[ÍI]CULO DO CURSO/i.test(text))parsed.push({kind:'cur',data:parseCurriculum(items)});
+      if(/CURR[ÍI]CULO DO CURSO/i.test(text)){
+        const raw=parseCurriculumRaw(items);const curs={};let lastErr=null;
+        (raw.choices.length?raw.choices:['']).forEach(hb=>{try{curs[hb]=buildCurriculum(raw,hb)}catch(e){lastErr=e}});
+        if(!Object.keys(curs).length)throw lastErr||new Error('Não consegui montar a grade desse currículo.');
+        parsed.push({kind:'cur',data:curs[Object.keys(curs)[0]],curs});
+      }
       else if(/HIST[ÓO]RICO/i.test(text))parsed.push({kind:'hist',data:parseHistoricoItems(items)});
       else throw new Error(`Não reconheci “${file.name}”. Envie o Currículo do Curso ou o Histórico Síntese, baixados do CAGR.`);
     }
     if(state.demo){state=saved||blank();saved=null;setDemo(false)}
     undoState=structuredClone(state);
     const msgs=[];
-    parsed.filter(x=>x.kind==='cur').forEach(({data})=>{state.cur=data;state.done=state.done||[];refresh();msgs.push(`Currículo de ${shortCourse()} lido: ${data.courses.length} disciplinas obrigatórias em ${new Set(data.courses.map(c=>c.fase)).size} fases.`)});
+    parsed.filter(x=>x.kind==='cur').forEach(({data,curs})=>{state.cur=data;state.curs=Object.keys(curs).length>1?curs:null;state.done=state.done||[];refresh();msgs.push(`Currículo de ${shortCourse()} lido: ${data.courses.length} disciplinas obrigatórias em ${new Set(data.courses.map(c=>c.fase)).size} fases.`)});
     refresh();
     parsed.filter(x=>x.kind==='hist').forEach(({data})=>{
       if(!data.recs.length)throw new Error('Não encontrei disciplinas no histórico. Confira se é o Histórico Síntese de Graduação.');
@@ -638,7 +710,7 @@ async function importFiles(files){
       state.hist={iaa:data.iaa,form:data.form,curso:data.curso,reprov:[...new Map(data.recs.filter(r=>!(r.nota>=6&&r.freq==='FS')&&!okSet.has(r.code)&&r.tipo!=='Ex').map(r=>[r.code,`${r.name} (nota ${r.nota.toLocaleString('pt-BR')})`])).values()]};
       msgs.push(`Histórico lido: ${state.recs.length} disciplinas aprovadas${data.iaa?`, IAA ${data.iaa}`:''}.`);
     });
-    refresh();deriveExtras();
+    refresh();deriveExtras();refresh();
     if(state.cur&&state.hist&&state.hist.curso&&!state.cur.curso.startsWith(state.hist.curso))msgs.push('Atenção: o histórico e o currículo parecem ser de cursos diferentes.');
     save();selected=null;render();
     document.getElementById('btnUndo').hidden=false;
@@ -652,6 +724,10 @@ async function importFiles(files){
 }
 
 // ---------- Eventos ----------
+document.addEventListener('change',e=>{
+  if(e.target.id!=='habSel'||!state.curs)return;
+  state.cur=state.curs[e.target.value];selected=null;refresh();deriveExtras();save();render();
+});
 function setDemo(on){document.getElementById('demo').hidden=!on;document.getElementById('btnExample').hidden=on}
 const board=document.getElementById('board');
 board.addEventListener('click',e=>{
@@ -681,9 +757,8 @@ document.getElementById('addOpt').onclick=()=>{state.opt.push({name:'Nova optati
 document.getElementById('addComp').onclick=()=>{state.comp.push({name:'Nova atividade',ha:10,done:false});save();renderList('comp');renderHero()};
 document.getElementById('btnExample').onclick=()=>{
   saved=state;
-  state=Object.assign(blank(),{cur:EXAMPLE_CUR,recs:EXAMPLE_RECS,done:EXAMPLE_RECS.map(r=>r.code),hist:{},demo:true,
-    comp:[{name:'Empresa júnior',ha:60,done:true},{name:'Centro acadêmico',ha:60,done:true},{name:'Outras atividades',ha:10,done:true}]});
-  refresh();deriveExtras();selected=null;render();setDemo(true);document.getElementById('importOut').innerHTML='';window.scrollTo({top:0,behavior:'smooth'});
+  state=Object.assign(blank(),{cur:EXAMPLE_CUR,recs:EXAMPLE_RECS,done:EXAMPLE_RECS.map(r=>r.code),hist:{},demo:true});
+  refresh();deriveExtras();state.comp.forEach(o=>o.done=true);selected=null;render();setDemo(true);document.getElementById('importOut').innerHTML='';window.scrollTo({top:0,behavior:'smooth'});
 };
 document.getElementById('btnLeaveDemo').onclick=()=>{state=saved||load();saved=null;selected=null;render();setDemo(false)};
 document.getElementById('btnReset').onclick=()=>{setDemo(false);saved=null;state=blank();selected=null;save();render();document.getElementById('importOut').innerHTML='';document.getElementById('btnUndo').hidden=true};
