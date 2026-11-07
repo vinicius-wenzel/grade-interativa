@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grade Interativa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
+<style>
+/* Layout: uma frase grande + o curso inteiro numa faixa de blocos; abaixo, as fases em colunas.
+   Concluída = pátina (cobre oxidado), disponível = âmbar, bloqueada = vaga tracejada. */
+:root{
+  --paper:#f2f5f4; --sheet:#ffffff; --ink:#1d2b29; --soft:#5d6b68; --rule:#dde4e2;
+  --patina:#2e7a68; --patina-tint:#dcebe6; --amber:#d9932b; --amber-tint:#fbefd9;
+  --slot:#c3cdca; --link:#3355c4;
+  --font:'Bricolage Grotesque',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#121918; --sheet:#1a2321; --ink:#e6eeec; --soft:#9aaba7; --rule:#2a3633;
+  --patina:#4fb39a; --patina-tint:#1d3631; --amber:#e8ab4f; --amber-tint:#3a2e19;
+  --slot:#3c4a47; --link:#8aa5f2; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --paper:#121918; --sheet:#1a2321; --ink:#e6eeec; --soft:#9aaba7; --rule:#2a3633;
+  --patina:#4fb39a; --patina-tint:#1d3631; --amber:#e8ab4f; --amber-tint:#3a2e19;
+  --slot:#3c4a47; --link:#8aa5f2; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:400 16px/1.5 var(--font);font-optical-sizing:auto;-webkit-font-smoothing:antialiased}
+.page{max-width:1400px;margin:0 auto;padding:28px 28px 80px;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{margin:0;text-wrap:balance;font-weight:700;letter-spacing:-.02em}
+p{margin:0}
+.num{font-variant-numeric:tabular-nums}
+.soft{color:var(--soft)}
+button,.btn{font:500 15px/1 var(--font);cursor:pointer;border-radius:999px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);padding:11px 18px;display:inline-flex;align-items:center;gap:8px;transition:border-color .15s,background .15s}
+button:hover,.btn:hover{border-color:var(--soft)}
+.btn-main{background:var(--patina);border-color:var(--patina);color:#fff}
+.btn-main:hover{border-color:var(--patina);filter:brightness(1.07)}
+.btn-quiet{background:transparent;border-color:transparent;color:var(--soft);padding:11px 10px}
+.btn-quiet:hover{color:var(--ink);border-color:transparent}
+:focus-visible{outline:2.5px solid var(--link);outline-offset:3px}
+
+/* Topo */
+.bar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{font-weight:700;font-size:17px;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
+.brand i{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--patina) 0 50%,var(--patina-tint) 50%);display:block}
+.brand small{font-weight:400;color:var(--soft);font-size:15px}
+.actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+
+/* Abertura */
+.hero{display:flex;flex-direction:column;gap:26px}
+.hero h1{font-size:clamp(44px,7.4vw,104px);line-height:.92;font-weight:800;letter-spacing:-.045em;font-variation-settings:'opsz' 96;max-width:14ch}
+.hero .lede{font-size:clamp(18px,2vw,22px);color:var(--soft);max-width:46ch;line-height:1.4}
+.hero .lede b{color:var(--ink);font-weight:600}
+.strip{display:flex;gap:10px;align-items:flex-end;overflow-x:auto;padding:4px 0 2px}
+.sgroup{display:flex;flex-direction:column;gap:8px;flex:1 0 auto}
+.sblocks{display:flex;gap:3px}
+.sb{flex:1 0 14px;height:44px;border-radius:4px;background:var(--slot);opacity:.55;cursor:pointer;border:none;padding:0;transition:transform .15s}
+.sb:hover{transform:scaleY(1.12)}
+.sb.done{background:var(--patina);opacity:1}
+.sb.avail{background:var(--amber);opacity:1}
+.sb.sel{outline:2.5px solid var(--ink);outline-offset:2px}
+.strip.fill .sb{animation:fill .55s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i) * 22ms)}
+@keyframes fill{from{background:var(--slot);opacity:.55;transform:scaleY(.5)}}
+.sgroup span{font-size:13px;color:var(--soft)}
+.keyrow{display:flex;gap:28px;flex-wrap:wrap;font-size:15px;align-items:baseline}
+.keyrow .k{display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:3px;display:inline-block;flex:none}
+.dot.done{background:var(--patina)}.dot.avail{background:var(--amber)}.dot.lock{background:var(--slot)}
+.neck{margin-left:auto;background:none;border:none;padding:0;color:var(--ink);font-size:15px;text-decoration:underline;text-decoration-color:var(--amber);text-decoration-thickness:2px;text-underline-offset:4px;border-radius:4px}
+.neck:hover{border:none;text-decoration-color:var(--ink)}
+
+/* Horas por categoria */
+.hours{display:grid;grid-template-columns:repeat(5,1fr);gap:28px;padding-top:24px;border-top:1px solid var(--rule)}
+.hours h3{font-size:15px;font-weight:600;letter-spacing:0}
+.hours p{font-size:14px;color:var(--soft);margin-top:2px}
+.meter{height:4px;border-radius:4px;background:var(--rule);margin-top:12px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--patina);border-radius:4px;transition:width .5s}
+
+/* Importar */
+.demo{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:var(--amber-tint);border-radius:14px;padding:12px 16px 12px 20px;font-size:15px;margin-bottom:-28px}
+.import{display:flex;gap:18px;align-items:center;flex-wrap:wrap;border:1.5px dashed var(--rule);border-radius:16px;padding:18px 22px;transition:background .15s,border-color .15s}
+.import.over{background:var(--patina-tint);border-color:var(--patina)}
+.import .t{flex:1;min-width:260px}
+.import .t h2{font-size:18px;letter-spacing:-.01em}
+.import .t p{font-size:14.5px;color:var(--soft);margin-top:2px;max-width:70ch}
+.importout{width:100%}
+.importout:empty{display:none}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-size:13.5px;padding:6px 12px;border-radius:999px;background:var(--sheet);border:1px solid var(--rule)}
+.tag.ok{background:var(--patina-tint);border-color:transparent;color:var(--patina);font-weight:600}
+.tag.bad{background:var(--amber-tint);border-color:transparent;color:#8a5a12}
+.importout details{margin-top:10px;font-size:14.5px}
+.importout summary{cursor:pointer;color:var(--soft)}
+.err{color:#b23a2b;font-weight:600}
+
+/* Quadro das fases */
+.board-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.board-head h2{font-size:32px;letter-spacing:-.03em}
+.board-head p{color:var(--soft);font-size:15px;margin-top:4px;max-width:60ch}
+.scroller{overflow-x:auto;margin:0 -28px;padding:0 28px 8px}
+.board{position:relative;display:grid;grid-template-columns:repeat(10,minmax(124px,1fr));gap:0;min-width:1300px}
+.links{position:absolute;inset:0;pointer-events:none;overflow:visible;z-index:3}
+.col{display:flex;flex-direction:column;gap:8px;padding:0 6px;border-left:1px solid var(--rule)}
+.col:first-of-type{border-left:none}
+.colhead{display:flex;justify-content:space-between;align-items:baseline;padding:2px 4px 8px}
+.colhead b{font-size:22px;font-weight:800;letter-spacing:-.03em;font-variation-settings:'opsz' 60}
+.colhead span{font-size:13px;color:var(--soft)}
+.c{position:relative;min-height:84px;border-radius:12px;padding:12px 12px 12px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;gap:8px;text-align:left;font:inherit;color:inherit;width:100%;transition:border-color .15s,background .15s,opacity .2s}
+.c .nm{font-size:14px;line-height:1.25;font-weight:600;letter-spacing:-.005em}
+.c .foot{display:flex;justify-content:space-between;align-items:center;gap:6px;min-height:22px}
+.c .lib{font-size:12px;color:var(--soft)}
+.c .chk{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--rule);background:var(--sheet);display:grid;place-items:center;flex:none;margin-left:auto;color:transparent;font-size:12px;line-height:1;transition:all .15s}
+.c .chk:hover{border-color:var(--patina);color:var(--patina)}
+.c.done{background:var(--patina-tint);border:1px solid transparent}
+.c.done .chk{background:var(--patina);border-color:var(--patina);color:#fff}
+.c.avail{background:var(--sheet);border:1px solid var(--rule);box-shadow:0 1px 0 var(--rule),0 6px 16px -10px rgba(29,43,41,.25)}
+.c.avail .lib{color:#8a5a12}
+.c.avail:hover{border-color:var(--amber)}
+.c.lock{background:transparent;border:1.5px dashed var(--slot);color:var(--soft)}
+.c.lock .nm{font-weight:500}
+.c.lock:hover{border-color:var(--soft)}
+.c.sel{outline:2.5px solid var(--ink);outline-offset:2px;z-index:4}
+.c.pre{outline:2px solid var(--link);outline-offset:2px;z-index:4}
+.c.unlk{outline:2px dashed var(--patina);outline-offset:2px;z-index:4}
+.dim .c:not(.sel):not(.pre):not(.unlk){opacity:.3}
+.legend{display:flex;gap:20px;flex-wrap:wrap;font-size:14px;color:var(--soft)}
+.legend span{display:flex;align-items:center;gap:7px}
+.ln{width:22px;border-top:2px solid var(--link)}
+.ln.u{border-top:2px dashed var(--patina)}
+
+/* Painel lateral */
+.drawer{position:fixed;top:14px;right:14px;bottom:14px;width:min(400px,calc(100vw - 28px));z-index:20;background:var(--sheet);border:1px solid var(--rule);border-radius:20px;box-shadow:0 24px 60px -20px rgba(29,43,41,.35);padding:26px;display:flex;flex-direction:column;gap:22px;overflow:auto;transform:translateX(calc(100% + 28px));transition:transform .3s cubic-bezier(.2,.8,.2,1);visibility:hidden}
+.drawer.open{transform:none;visibility:visible}
+.dtop{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.dtop h3{font-size:28px;line-height:1.08;letter-spacing:-.03em;font-weight:800}
+.dtop p{color:var(--soft);font-size:14.5px;margin-top:8px}
+.close{width:38px;height:38px;padding:0;justify-content:center;font-size:20px;flex:none}
+.state{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;padding:7px 12px;border-radius:999px;align-self:flex-start}
+.state.done{background:var(--patina-tint);color:var(--patina)}
+.state.avail{background:var(--amber-tint);color:#8a5a12}
+.state.lock{background:var(--paper);color:var(--soft)}
+.specs{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--rule);border-radius:14px}
+.specs div{padding:12px 14px;border-left:1px solid var(--rule)}
+.specs div:first-child{border-left:none}
+.specs b{display:block;font-size:22px;font-weight:700;letter-spacing:-.02em}
+.specs span{font-size:13px;color:var(--soft)}
+.dsec h4{margin:0 0 8px;font-size:15px;font-weight:600}
+.dsec .empty{font-size:14.5px;color:var(--soft)}
+.dlist{display:flex;flex-direction:column}
+.dlist button{border:none;border-radius:10px;background:none;padding:9px 10px;justify-content:flex-start;gap:10px;font-size:14.5px;text-align:left;line-height:1.3}
+.dlist button:hover{background:var(--paper)}
+.dlist small{color:var(--soft);margin-left:auto;font-size:12.5px;white-space:nowrap}
+.need{background:var(--amber-tint);border-radius:12px;padding:12px 14px;font-size:14.5px}
+.drawer .toggle{margin-top:auto;justify-content:center;padding:14px}
+
+/* Optativas e complementares */
+.extras{display:grid;grid-template-columns:1fr 1fr;gap:56px}
+.ex-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--rule)}
+.ex-head h2{font-size:24px;letter-spacing:-.025em}
+.ex-head p{font-size:14px;color:var(--soft);margin-top:2px}
+.rows{display:flex;flex-direction:column}
+.r{display:grid;grid-template-columns:26px 1fr 84px 32px;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--rule)}
+.r input[type=text],.r input[type=number]{font:inherit;font-size:15px;color:var(--ink);border:1px solid transparent;background:transparent;padding:6px 8px;border-radius:8px;width:100%}
+.r input[type=number]{text-align:right;font-variant-numeric:tabular-nums}
+.r input[type=text]:hover,.r input[type=number]:hover{border-color:var(--rule)}
+.r input[type=text]:focus,.r input[type=number]:focus{border-color:var(--soft);background:var(--sheet);outline:none}
+.r input[type=checkbox]{appearance:none;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--rule);background:var(--sheet);cursor:pointer;display:grid;place-items:center;margin:0}
+.r input[type=checkbox]:checked{background:var(--patina);border-color:var(--patina)}
+.r input[type=checkbox]:checked::after{content:'✓';color:#fff;font-size:12px}
+.r .rm{border:none;background:none;color:var(--soft);padding:6px;justify-content:center;font-size:18px}
+.r .rm:hover{color:var(--ink)}
+.r .hrs{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--soft)}
+.add{margin-top:12px}
+footer{font-size:14px;color:var(--soft);border-top:1px solid var(--rule);padding-top:20px}
+
+@media (max-width:1000px){.hours{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:760px){
+  .page{padding:20px 18px 64px;gap:44px}
+  .scroller{margin:0 -18px;padding:0 18px 8px}
+  .extras{grid-template-columns:1fr;gap:44px}
+  .hours{grid-template-columns:1fr 1fr}
+  .neck{margin-left:0}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="bar">
+    <div class="brand"><i aria-hidden="true"></i>Grade interativa <small>Engenharia de Materiais, UFSC</small></div>
+    <div class="actions">
+      <label class="btn btn-main" for="pdfIn">Importar histórico</label>
+      <button class="btn-quiet" id="btnExample">Ver exemplo</button>
+      <button class="btn-quiet" id="btnReset">Começar do zero</button>
+    </div>
+  </div>
+
+  <div class="demo" id="demo" hidden><span>Você está vendo um exemplo de aluno. Nada disso é o seu progresso.</span><button id="btnLeaveDemo">Usar com os meus dados</button></div>
+
+  <section class="hero" aria-label="Resumo do curso">
+    <h1 id="headline">0% do curso concluído</h1>
+    <p class="lede" id="lede"></p>
+    <div class="strip" id="strip" aria-label="Todas as disciplinas obrigatórias, por fase"></div>
+    <div class="keyrow" id="keyrow"></div>
+    <div class="hours" id="hours"></div>
+  </section>
+
+  <section class="import" id="drop">
+    <div class="t">
+      <h2>Atualize pelo seu histórico</h2>
+      <p>Arraste o Histórico Síntese da UFSC em PDF para cá. As disciplinas aprovadas são marcadas sozinhas, e o arquivo nunca sai do seu navegador.</p>
+    </div>
+    <input type="file" id="pdfIn" accept="application/pdf,.pdf" hidden>
+    <label class="btn" for="pdfIn">Escolher PDF</label>
+    <button id="btnUndo" hidden>Desfazer importação</button>
+    <div id="importOut" class="importout"></div>
+  </section>
+
+  <section aria-label="Disciplinas por fase">
+    <div class="board-head">
+      <div>
+        <h2>Disciplinas por fase</h2>
+        <p>Clique numa disciplina para ver os pré-requisitos e o que ela libera. O círculo marca como concluída.</p>
+      </div>
+      <div class="legend">
+        <span><i class="dot done"></i>Concluída</span>
+        <span><i class="dot avail"></i>Disponível</span>
+        <span><i class="dot lock"></i>Bloqueada</span>
+        <span><i class="ln"></i>Pré-requisito</span>
+        <span><i class="ln u"></i>Libera</span>
+      </div>
+    </div>
+    <div class="scroller"><div class="board" id="board"></div></div>
+  </section>
+
+  <section class="extras">
+    <div>
+      <div class="ex-head"><div><h2>Optativas</h2><p id="optNote" class="num"></p></div></div>
+      <div class="rows" id="optBody"></div>
+      <button class="add" id="addOpt">Adicionar optativa</button>
+    </div>
+    <div>
+      <div class="ex-head"><div><h2>Horas complementares</h2><p id="compNote" class="num"></p></div></div>
+      <div class="rows" id="compBody"></div>
+      <button class="add" id="addComp">Adicionar atividade</button>
+    </div>
+  </section>
+
+  <footer>Feito por Vinicius Wenzel Rockstroh, aluno de Engenharia de Materiais da UFSC, a partir da planilha que ele usava para planejar a própria matrícula. Seus dados ficam salvos só neste navegador.</footer>
+</div>
+
+<aside class="drawer" id="drawer" aria-live="polite"></aside>
+
+<script>
+// ---------- Dados da grade (Engenharia de Materiais – UFSC) ----------
+const COURSES = [
+ [1,'EGR6603','Desenho Técnico e CAD para Eng. de Materiais',72,4,[]],
+ [1,'EMC6711','Introdução à Engenharia de Materiais',72,4,[]],
+ [1,'ENS6122','Elementos de Engenharia Ambiental',36,2,[]],
+ [1,'FSC5101','Física 1',72,4,[]],
+ [1,'MTM3110','Cálculo 1',72,4,[]],
+ [1,'QMC5125','Química Geral Experimental A',36,2,[]],
+ [1,'QMC5138','Química Geral',36,2,[]],
+ [2,'EMC6719','Materiais e Microestruturas',72,4,['EMC6711']],
+ [2,'EMC6731','Caracterização Microestrutural de Materiais',72,4,[]],
+ [2,'FSC5002','Física 2',72,4,['FSC5101','MTM3110']],
+ [2,'MTM3120','Cálculo 2',72,4,['MTM3110']],
+ [2,'MTM3121','Álgebra Linear',72,4,[]],
+ [2,'QMC6118','Química para Eng. de Materiais 2',72,4,['QMC5138']],
+ [3,'EMC5223','Estatística e Metrologia para Engenheiros',72,4,['MTM3110']],
+ [3,'EMC6714','Mecanismos de Deformação e Fratura',72,4,['EMC6719']],
+ [3,'EMC6715','Metais Ferrosos e não Ferrosos',72,4,['EMC6719']],
+ [3,'EMC6716','Materiais Poliméricos',72,4,['EMC6711','QMC6118']],
+ [3,'MTM3103','Cálculo 3',72,4,['MTM3120']],
+ [3,'MTM3131','Equações Diferenciais Ordinárias',72,4,['MTM3120','MTM3121']],
+ [4,'EMC6130','Mecânica dos Sólidos para Eng. de Materiais',72,4,['MTM3120']],
+ [4,'EMC6713','Termodinâmica de Materiais',72,4,['MTM3120']],
+ [4,'EMC6733','Análise Termofísica de Materiais',36,2,['EMC6716','EMC6719']],
+ [4,'EMC6734','Propriedades Mecânicas',54,3,['EMC6714']],
+ [4,'EMC6735','Caracterização de Materiais Poliméricos',36,2,['EMC6716']],
+ [4,'FSC5113','Física 3',72,4,['MTM3110']],
+ [4,'MTM3104','Cálculo 4',72,4,['MTM3120']],
+ [5,'EMC5425','Fenômenos de Transportes',72,4,[],['FSC5002','MTM3102']],
+ [5,'EMC6718','Análise de Falhas em Materiais',36,2,['EMC6734']],
+ [5,'EMC6742','Conformação Mecânica',54,3,['EMC6734']],
+ [5,'EMC6743','Fundição',36,2,['EMC6715']],
+ [5,'EMC6744','Processamento de Materiais Poliméricos',72,4,['EMC6716']],
+ [5,'EMC6746','Materiais Vítreos',72,4,['EMC6719']],
+ [5,'FSC5114','Física 4',72,4,['FSC5113']],
+ [6,'EMC6551','Estágio Supervisionado 1',258,14,[],null,'est'],
+ [7,'EMC6717','Estrutura e Propriedades de Materiais Cerâmicos',72,4,['EMC6746']],
+ [7,'EMC6726','Ferramentas da Qualidade',36,2,['EMC5223']],
+ [7,'EMC6747','Soldagem',36,2,['EMC6715']],
+ [7,'EMC6748','Usinagem',36,2,['EMC6715']],
+ [7,'EMC6749','Engenharia de Superfície',72,4,['EMC6713','EMC6719','EMC6731']],
+ [7,'EQA6745','Processamento de Materiais Cerâmicos',72,4,['EMC6746']],
+ [7,'FSC6062','Física dos Materiais',90,5,['FSC5114']],
+ [7,'INE5201','Introdução à Ciência da Computação',54,3,['MTM3110']],
+ [8,'EMC6552','Estágio Supervisionado 2',258,14,['EMC6551'],null,'est'],
+ [9,'EGC6021','Engenharia e Gestão do Conhecimento',72,4,['EMC6551']],
+ [9,'EMC6763','Materiais Sinterizados',54,3,['EMC6713','EQA6745']],
+ [9,'EMC6771','Trabalho de Conclusão de Curso 1',36,2,['EMC6551'],null,'tcc'],
+ [9,'EMC6900','Técnicas de Simulação Numérica',36,2,['EMC5425','EMC6130','INE5201','MTM3104']],
+ [9,'EMC6901','Ciência, Tecnologia e Sociedade',72,4,['EMC6742','EMC6744','EQA6745']],
+ [9,'EMC6902','Processo de Desenvolvimento de Produtos',54,3,[]],
+ [9,'EQA6900','Introdução à Modelagem e Simulação de Materiais',72,4,['EMC6713','INE5201','MTM3104']],
+ [10,'EMC6772','Trabalho de Conclusão de Curso 2',252,14,['EMC6771'],null,'tcc'],
+].map(([fase,code,name,ha,aulas,pre,preAny,cat])=>({fase,code,name,ha,aulas,pre,preAny:preAny||null,cat:cat||'obr'}));
+const BY = Object.fromEntries(COURSES.map(c=>[c.code,c]));
+const REQ = {obr:2916, est:516, tcc:288, opt:474, comp:126};
+const CAT_LABEL = {obr:'Obrigatórias', est:'Estágio', tcc:'TCC', opt:'Optativas', comp:'Complementares'};
+const DEPS = {};
+COURSES.forEach(c=>{[...c.pre,...(c.preAny||[])].forEach(p=>{(DEPS[p]=DEPS[p]||[]).push(c.code)})});
+function allDependents(code,seen=new Set()){(DEPS[code]||[]).forEach(d=>{if(!seen.has(d)){seen.add(d);allDependents(d,seen)}});return seen}
+
+// ---------- Estado ----------
+const EXAMPLE = {
+  done: COURSES.map(c=>c.code).filter(c=>!['EMC6718','FSC5114','EMC6749','FSC6062','EMC6552','EMC6900','EQA6900','EMC6772'].includes(c)),
+  opt: [[72,1],[36,1],[36,0],[36,1],[72,1],[72,1],[36,0],[72,0],[72,0],[72,0],[72,1],[72,1],[36,1]].map(([h,d],i)=>({name:'Optativa '+(i+1),ha:h,done:!!d})),
+  comp: [{name:'EJEM (empresa júnior)',ha:60,done:true},{name:'CAMAT (centro acadêmico)',ha:60,done:true},{name:'Outras atividades',ha:10,done:true}]
+};
+const EMPTY = {done:[],opt:[],comp:[]};
+const KEY='grade-materiais-ufsc-v1';
+let state, selected=null;
+function load(){try{const s=localStorage.getItem(KEY);if(s){const o=JSON.parse(s);delete o.turmas;delete o.sel;return o}}catch(e){}return structuredClone(EMPTY)}
+function save(){if(state.demo)return;try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+state=load();
+const isDone=c=>state.done.includes(c);
+function status(c){
+  if(isDone(c.code))return 'done';
+  const allOk=c.pre.every(isDone), anyOk=!c.preAny||c.preAny.some(isDone);
+  return allOk&&anyOk?'avail':'lock';
+}
+function missing(c){
+  const m=c.pre.filter(p=>!isDone(p));
+  if(c.preAny&&!c.preAny.some(isDone))m.push(c.preAny.join(' ou '));
+  return m;
+}
+const fmt=n=>n.toLocaleString('pt-BR');
+const pctTxt=p=>(Math.round(p*10)/10).toLocaleString('pt-BR');
+const esc=s=>String(s).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+
+
+// ---------- Resumo ----------
+function totals(){
+  const t={obr:0,est:0,tcc:0,opt:0,comp:0};
+  COURSES.forEach(c=>{if(isDone(c.code))t[c.cat]+=c.ha});
+  state.opt.forEach(o=>{if(o.done)t.opt+=+o.ha||0});
+  state.comp.forEach(o=>{if(o.done)t.comp+=+o.ha||0});
+  return t;
+}
+function bottleneck(){
+  return COURSES.filter(c=>!isDone(c.code)).map(c=>({c,n:allDependents(c.code).size})).sort((a,b)=>b.n-a.n||a.c.fase-b.c.fase)[0];
+}
+function renderHero(){
+  const t=totals();let num=0,den=0,hrs='';
+  for(const k of Object.keys(REQ)){
+    const got=Math.min(t[k],REQ[k]);num+=got;den+=REQ[k];
+    hrs+=`<div><h3>${CAT_LABEL[k]}</h3><p class="num">${fmt(t[k])} de ${fmt(REQ[k])} h/a</p><div class="meter"><i style="width:${got/REQ[k]*100}%"></i></div></div>`;
+  }
+  document.getElementById('hours').innerHTML=hrs;
+  const p=Math.floor(num/den*100);
+  const pend=COURSES.filter(c=>!isDone(c.code));
+  document.getElementById('headline').textContent=`${p}% do curso concluído`;
+  document.getElementById('lede').innerHTML=pend.length
+    ?`Faltam <b class="num">${pend.length} disciplinas obrigatórias</b> e <b class="num">${fmt(den-num)} horas-aula</b> até a formatura.`
+    :`Todas as obrigatórias concluídas. Faltam <b class="num">${fmt(den-num)} horas-aula</b> em outras categorias.`;
+  if(!state.done.length&&!state.demo)document.getElementById('lede').innerHTML=`Importe o seu histórico da UFSC ou marque as disciplinas que você já concluiu para ver o seu caminho até a formatura.`;
+  // faixa do curso
+  let s='',i=0;
+  for(let f=1;f<=10;f++){
+    const cs=COURSES.filter(c=>c.fase===f);
+    s+=`<div class="sgroup" style="flex-grow:${cs.length}"><div class="sblocks">${cs.map(c=>`<button class="sb ${status(c)}${selected===c.code?' sel':''}" style="--i:${i++}" data-code="${c.code}" title="${esc(c.name)}" aria-label="${esc(c.name)}"></button>`).join('')}</div><span>${f}ª</span></div>`;
+  }
+  document.getElementById('strip').innerHTML=s;
+  const av=pend.filter(c=>status(c)==='avail').length, lk=pend.length-av;
+  const n=bottleneck();
+  document.getElementById('keyrow').innerHTML=`
+    <span class="k"><i class="dot done"></i><span class="num">${COURSES.length-pend.length}</span>&nbsp;concluídas</span>
+    <span class="k"><i class="dot avail"></i><span class="num">${av}</span>&nbsp;disponíveis agora</span>
+    <span class="k"><i class="dot lock"></i><span class="num">${lk}</span>&nbsp;${lk===1?'bloqueada':'bloqueadas'}</span>
+    ${n&&n.n?`<button class="neck" data-go="${n.c.code}">Seu gargalo: ${esc(n.c.name)} libera ${n.n} ${n.n===1?'disciplina':'disciplinas'}</button>`:''}`;
+}
+
+// ---------- Quadro ----------
+function renderBoard(){
+  const b=document.getElementById('board');
+  const pre=selected?new Set([...BY[selected].pre,...(BY[selected].preAny||[])]):new Set();
+  const dep=selected?allDependents(selected):new Set();
+  b.classList.toggle('dim',!!selected);
+  let h='<svg class="links" id="links" aria-hidden="true"></svg>';
+  for(let f=1;f<=10;f++){
+    const cs=COURSES.filter(c=>c.fase===f);
+    const dn=cs.filter(c=>isDone(c.code)).length;
+    h+=`<div class="col"><div class="colhead"><b>${f}ª</b><span class="num">${dn} de ${cs.length}</span></div>`;
+    cs.forEach(c=>{
+      const s=status(c),u=allDependents(c.code).size;
+      const cls=['c',s];
+      if(selected===c.code)cls.push('sel');else if(pre.has(c.code))cls.push('pre');else if(dep.has(c.code))cls.push('unlk');
+      const tip=s==='lock'?`Bloqueada: falta ${missing(c).map(x=>BY[x]?BY[x].name:x).join(', ')}`:s==='avail'?'Disponível para cursar':'Concluída';
+      h+=`<div class="${cls.join(' ')}" data-code="${c.code}" tabindex="0" role="button" aria-label="${esc(c.name+'. '+tip)}" title="${esc(tip)}">
+        <span class="nm">${esc(c.name)}</span>
+        <span class="foot">${u&&s!=='done'?`<span class="lib">libera ${u}</span>`:''}<span class="chk" data-toggle="${c.code}" role="checkbox" aria-checked="${s==='done'}" aria-label="Marcar ${esc(c.name)} como concluída" tabindex="0">✓</span></span>
+      </div>`;
+    });
+    h+='</div>';
+  }
+  b.innerHTML=h;
+  requestAnimationFrame(drawLinks);
+}
+function drawLinks(){
+  const svg=document.getElementById('links');if(!svg)return;
+  const b=document.getElementById('board');
+  svg.setAttribute('width',b.scrollWidth);svg.setAttribute('height',b.scrollHeight);
+  svg.setAttribute('viewBox',`0 0 ${b.scrollWidth} ${b.scrollHeight}`);
+  if(!selected){svg.innerHTML='';return}
+  const box=b.getBoundingClientRect();
+  const rect=code=>{const el=b.querySelector(`.c[data-code="${code}"]`);if(!el)return null;const r=el.getBoundingClientRect();return {l:r.left-box.left,r:r.right-box.left,cy:r.top-box.top+r.height/2}};
+  const path=(a,z)=>{const dx=Math.max(26,(z.l-a.r)/2);return `M${a.r} ${a.cy} C${a.r+dx} ${a.cy},${z.l-dx} ${z.cy},${z.l} ${z.cy}`};
+  const c=BY[selected];let out='';
+  [...c.pre,...(c.preAny||[])].forEach(p=>{const a=rect(p),z=rect(selected);if(a&&z)out+=`<path d="${path(a,z)}" fill="none" stroke="var(--link)" stroke-width="2.2"/><circle cx="${a.r}" cy="${a.cy}" r="3.5" fill="var(--link)"/>`});
+  const dep=allDependents(selected);
+  COURSES.filter(x=>dep.has(x.code)).forEach(x=>{[...x.pre,...(x.preAny||[])].filter(p=>p===selected||dep.has(p)).forEach(p=>{const a=rect(p),z=rect(x.code);if(a&&z)out+=`<path d="${path(a,z)}" fill="none" stroke="var(--patina)" stroke-width="2" stroke-dasharray="5 4"/>`})});
+  svg.innerHTML=out;
+}
+
+// ---------- Painel lateral ----------
+function itemBtn(code){
+  const c=BY[code];
+  if(!c)return `<button disabled><i class="dot lock"></i>${code}<small>fora desta grade</small></button>`;
+  const s=status(c);
+  return `<button data-go="${code}"><i class="dot ${s}"></i>${esc(c.name)}<small>${c.fase}ª fase</small></button>`;
+}
+function renderDrawer(){
+  const d=document.getElementById('drawer');
+  if(!selected){d.classList.remove('open');return}
+  const c=BY[selected],s=status(c);
+  const stTxt={done:'Concluída',avail:'Disponível para cursar',lock:'Bloqueada'}[s];
+  const pre=[...c.pre,...(c.preAny||[])],dep=[...allDependents(c.code)];
+  d.innerHTML=`
+    <div class="dtop"><div><h3>${esc(c.name)}</h3><p>${c.code}, ${c.fase}ª fase</p></div><button class="close" id="dClose" aria-label="Fechar">×</button></div>
+    <span class="state ${s}"><i class="dot ${s}"></i>${stTxt}</span>
+    <div class="specs"><div><b class="num">${c.ha}</b><span>horas-aula</span></div><div><b class="num">${c.aulas}</b><span>aulas por semana</span></div><div><b class="num">${dep.length}</b><span>${dep.length===1?'disciplina liberada':'disciplinas liberadas'}</span></div></div>
+    ${s==='lock'?`<div class="need">Para liberar, conclua ${missing(c).map(x=>BY[x]?BY[x].name:x).join(' e ')}.</div>`:''}
+    <div class="dsec"><h4>Pré-requisitos${c.preAny?' (basta uma das opções)':''}</h4>${pre.length?`<div class="dlist">${pre.map(itemBtn).join('')}</div>`:'<p class="empty">Nenhum. Pode ser cursada a qualquer momento.</p>'}</div>
+    <div class="dsec"><h4>Libera depois</h4>${dep.length?`<div class="dlist">${dep.map(itemBtn).join('')}</div>`:'<p class="empty">Nenhuma disciplina depende desta.</p>'}</div>
+    <button class="toggle ${s==='done'?'':'btn-main'}" id="dToggle">${s==='done'?'Desmarcar conclusão':'Marcar como concluída'}</button>`;
+  d.classList.add('open');
+  document.getElementById('dToggle').onclick=()=>toggle(c.code);
+  document.getElementById('dClose').onclick=()=>select(null);
+}
+
+// ---------- Optativas e complementares ----------
+function renderList(kind){
+  document.getElementById(kind+'Body').innerHTML=state[kind].map((o,i)=>`<div class="r">
+    <input type="checkbox" id="${kind}-ok-${i}" ${o.done?'checked':''} data-k="${kind}" data-i="${i}" data-f="done" aria-label="Concluída">
+    <input type="text" id="${kind}-nm-${i}" value="${esc(o.name)}" data-k="${kind}" data-i="${i}" data-f="name" aria-label="Nome">
+    <span class="hrs"><input type="number" id="${kind}-ha-${i}" min="0" value="${o.ha}" data-k="${kind}" data-i="${i}" data-f="ha" aria-label="Horas-aula">h/a</span>
+    <button class="rm" data-del="${kind}" data-i="${i}" aria-label="Remover">×</button></div>`).join('')||`<p class="soft" style="padding:12px 0;font-size:15px">${kind==='opt'?'Nenhuma optativa ainda. Elas entram sozinhas quando você importa o histórico.':'Nenhuma atividade ainda. Adicione empresa júnior, centro acadêmico, eventos e outras.'}</p>`;
+  renderNote(kind);
+}
+function renderNote(kind){
+  const t=state[kind].filter(o=>o.done).reduce((a,o)=>a+(+o.ha||0),0),req=REQ[kind];
+  document.getElementById(kind+'Note').textContent=t>=req?`${fmt(t)} de ${fmt(req)} h/a. Exigência cumprida.`:`${fmt(t)} de ${fmt(req)} h/a. Faltam ${fmt(req-t)}.`;
+}
+
+function render(){renderHero();renderBoard();renderDrawer();renderList('opt');renderList('comp')}
+function select(code){selected=code;renderHero();renderBoard();renderDrawer()}
+function toggle(code){
+  if(isDone(code))state.done=state.done.filter(c=>c!==code);else state.done.push(code);
+  save();renderHero();renderBoard();renderDrawer();
+}
+
+// ---------- Eventos ----------
+const board=document.getElementById('board');
+board.addEventListener('click',e=>{
+  const t=e.target.closest('[data-toggle]');
+  if(t){e.stopPropagation();toggle(t.dataset.toggle);return}
+  const el=e.target.closest('.c');
+  if(el)select(selected===el.dataset.code?null:el.dataset.code);
+});
+board.addEventListener('keydown',e=>{
+  if(e.key!=='Enter'&&e.key!==' ')return;
+  const t=e.target.closest('[data-toggle]');
+  if(t){e.preventDefault();toggle(t.dataset.toggle);return}
+  const el=e.target.closest('.c');if(el){e.preventDefault();select(el.dataset.code)}
+});
+document.getElementById('strip').addEventListener('click',e=>{const b=e.target.closest('[data-code]');if(b)select(selected===b.dataset.code?null:b.dataset.code)});
+document.addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g)select(g.dataset.go)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&selected)select(null)});
+window.addEventListener('resize',()=>requestAnimationFrame(drawLinks));
+document.addEventListener('input',e=>{
+  const el=e.target;if(!el.dataset||!el.dataset.k)return;
+  const o=state[el.dataset.k][+el.dataset.i];
+  if(el.dataset.f==='done')o.done=el.checked;else if(el.dataset.f==='ha')o.ha=+el.value||0;else o.name=el.value;
+  save();renderHero();renderNote(el.dataset.k);
+});
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-del]');if(!b)return;
+  state[b.dataset.del].splice(+b.dataset.i,1);save();renderHero();renderList(b.dataset.del);
+});
+document.getElementById('addOpt').onclick=()=>{state.opt.push({name:'Optativa '+(state.opt.length+1),ha:72,done:false});save();renderList('opt');renderHero()};
+document.getElementById('addComp').onclick=()=>{state.comp.push({name:'Nova atividade',ha:10,done:false});save();renderList('comp');renderHero()};
+let saved=null;
+function setDemo(on){
+  document.getElementById('demo').hidden=!on;
+  document.getElementById('btnExample').hidden=on;
+}
+document.getElementById('btnExample').onclick=()=>{saved=state;state=structuredClone(EXAMPLE);state.demo=true;selected=null;render();setDemo(true);document.getElementById('importOut').innerHTML='';window.scrollTo({top:0,behavior:'smooth'})};
+document.getElementById('btnLeaveDemo').onclick=()=>{state=saved||load();saved=null;selected=null;render();setDemo(false)};
+document.getElementById('btnReset').onclick=()=>{setDemo(false);saved=null;state=structuredClone(EMPTY);selected=null;save();render();document.getElementById('importOut').innerHTML=''};
+
+// ---------- Importar histórico (PDF da UFSC) ----------
+const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+let pdfReady=null, undoState=null;
+function loadScript(src){return new Promise((ok,fail)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=()=>fail(new Error('Não foi possível carregar o leitor de PDF.'));document.head.appendChild(s)})}
+function getPdfJs(){
+  if(!pdfReady)pdfReady=(async()=>{
+    await loadScript(PDFJS+'pdf.min.js');
+    await loadScript(PDFJS+'pdf.worker.min.js');
+    const lib=window.pdfjsLib||window['pdfjs-dist/build/pdf'];
+    lib.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js';
+    return lib;
+  })().catch(e=>{pdfReady=null;throw e});
+  return pdfReady;
+}
+async function pdfLines(buf){
+  const lib=await getPdfJs();
+  const doc=await lib.getDocument({data:buf}).promise;
+  const lines=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const page=await doc.getPage(p);
+    const W=page.getViewport({scale:1}).width;
+    const tc=await page.getTextContent();
+    const rows=new Map();
+    tc.items.forEach(it=>{
+      if(!it.str||!it.str.trim())return;
+      const x=it.transform[4],y=it.transform[5],half=x<W/2?0:1,key=half+':'+Math.round(y/3);
+      if(!rows.has(key))rows.set(key,{half,y,items:[]});
+      rows.get(key).items.push({x,s:it.str});
+    });
+    [...rows.values()].sort((a,b)=>a.half-b.half||b.y-a.y).forEach(r=>{
+      lines.push(r.items.sort((a,b)=>a.x-b.x).map(i=>i.s.trim()).join(' ').replace(/\s+/g,' '));
+    });
+  }
+  return lines;
+}
+function parseHistorico(lines){
+  const rx=/([A-Z]{3}\d{4})\s+(.+?)\s+(\d{1,2}[.,]\d)\s+(\d{2,3})\s+(FS|FI)\s+(Ob|Op|Ex|Rv)\b/g;
+  const recs=[];
+  lines.forEach(l=>{let m;rx.lastIndex=0;while((m=rx.exec(l)))recs.push({code:m[1],name:m[2],nota:parseFloat(m[3].replace(',','.')),ha:+m[4],freq:m[5],tipo:m[6]})});
+  const text=lines.join(' ');
+  const iaa=[...text.matchAll(/IAA\s*-\s*(\d{1,2},\d{2})/g)].map(m=>m[1]).pop()||null;
+  const form=(text.match(/Prov[áa]vel semestre de formatura:?\s*(\d{4}\/\d)/)||[])[1]||null;
+  return {recs,iaa,form};
+}
+async function importPdf(file){
+  const out=document.getElementById('importOut');
+  if(!file)return;
+  if(!/pdf$/i.test(file.name)&&file.type!=='application/pdf'){out.innerHTML='<span class="err">Envie um arquivo PDF.</span>';return}
+  out.innerHTML='<span class="muted">Lendo o PDF…</span>';
+  try{
+    const {recs,iaa,form}=parseHistorico(await pdfLines(await file.arrayBuffer()));
+    if(!recs.length){out.innerHTML='<span class="err">Não encontrei disciplinas nesse PDF.</span> <span class="muted">Confira se é o Histórico Síntese de Graduação da UFSC.</span>';return}
+    const aprov=r=>r.nota>=6&&r.freq==='FS';
+    const okCodes=new Set(recs.filter(aprov).map(r=>r.code));
+    const doneGrid=COURSES.filter(c=>okCodes.has(c.code)).map(c=>c.code);
+    const uniq=a=>[...new Map(a.map(r=>[r.code,r])).values()];
+    const reprov=uniq(recs.filter(r=>!aprov(r)&&!okCodes.has(r.code)&&r.tipo!=='Ex'));
+    const opt=uniq(recs.filter(r=>r.tipo==='Op'&&aprov(r)));
+    const fora=uniq(recs.filter(r=>aprov(r)&&(r.tipo==='Ex'||(r.tipo==='Ob'&&!BY[r.code]))));
+    if(state.demo){state=saved||structuredClone(EMPTY);saved=null;setDemo(false)}
+    undoState=structuredClone(state);
+    state.done=doneGrid;
+    if(opt.length)state.opt=opt.map(r=>({name:`${r.code} – ${r.name}`,ha:r.ha,done:true}));
+    state.hist={iaa,formatura_prevista_no_historico:form,reprovacoes_pendentes:reprov.map(r=>`${r.code} ${r.name} (nota ${r.nota})`),aprovadas_fora_da_grade:fora.map(r=>`${r.code} ${r.name}`)};
+    save();selected=null;render();
+    document.getElementById('btnUndo').hidden=false;
+    const pend=COURSES.filter(c=>!isDone(c.code));
+    const li=a=>a.map(x=>`<li>${esc(x)}</li>`).join('');
+    out.innerHTML=`<div class="tags">
+        <span class="tag ok">Histórico importado</span>
+        <span class="tag num">${recs.length} registros lidos</span>
+        <span class="tag num">${doneGrid.length}/${COURSES.length} obrigatórias aprovadas</span>
+        ${iaa?`<span class="tag num">IAA ${iaa}</span>`:''}
+        ${form?`<span class="tag num">Formatura prevista no histórico: ${form}</span>`:''}
+        ${reprov.length?`<span class="tag bad num">${reprov.length} reprovação(ões) a recuperar</span>`:''}
+      </div>
+      ${reprov.length?`<details open><summary>Reprovações ainda não recuperadas</summary><ul>${li(reprov.map(r=>`${r.code} – ${r.name} (nota ${r.nota.toLocaleString('pt-BR')})`))}</ul></details>`:''}
+      <details><summary>Pendentes na grade (${pend.length})</summary><ul>${li(pend.map(c=>`${c.code} – ${c.name} · ${c.ha} h/a`))}</ul></details>
+      ${fora.length?`<details><summary>Aprovadas que não estão nesta grade (${fora.length})</summary><ul>${li(fora.map(r=>`${r.code} – ${r.name} (${r.tipo==='Ex'?'extracurso':'outro currículo'})`))}</ul></details>`:''}`;
+  }catch(e){
+    out.innerHTML='<span class="err">Não consegui ler o PDF.</span> <span class="muted">'+esc(e&&e.message?e.message:'')+'</span>';
+  }
+}
+document.getElementById('pdfIn').addEventListener('change',e=>{importPdf(e.target.files[0]);e.target.value=''});
+const drop=document.getElementById('drop');
+['dragenter','dragover'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove('over')}));
+drop.addEventListener('drop',e=>importPdf(e.dataTransfer.files[0]));
+document.getElementById('btnUndo').onclick=()=>{if(!undoState)return;state=undoState;undoState=null;save();render();document.getElementById('btnUndo').hidden=true;document.getElementById('importOut').innerHTML='<span class="muted">Importação desfeita.</span>'};
+
+
+render();
+const strip=document.getElementById('strip');strip.classList.add('fill');setTimeout(()=>strip.classList.remove('fill'),2600);
+</script>
+</body>
+</html>
